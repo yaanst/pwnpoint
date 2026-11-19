@@ -19,10 +19,26 @@ Supported browsers: Chrome, Edge and Firefox (desktop).
 
 ## Running it
 
-1. Get `index.html`: build it (below) or download it from a release.
+1. Download `pwnpoint-vX.Y.Z.html` from the [latest release](https://github.com/yaanst/pwnpoint/releases/latest),
+   or build it yourself (below).
 2. Open the file in Chrome, Edge or Firefox (double-click it, or drag it into the browser).
 
 That's it: no server, no install. The file contains all of the app's code and styles.
+To update, download the newer file.
+
+A copy is also hosted on [GitHub Pages](https://yaanst.github.io/pwnpoint/). Pages only
+serves the static file: the app makes no requests and keeps data in your browser. For
+client work, prefer the downloaded file.
+
+### Verify a download
+
+Each release includes a `SHA256SUMS` file and a signed build provenance attestation that
+ties the file to the workflow run that built it:
+
+```bash
+sha256sum -c SHA256SUMS
+gh attestation verify pwnpoint-vX.Y.Z.html --repo yaanst/pwnpoint
+```
 
 ## Development
 

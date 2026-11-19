@@ -36,6 +36,13 @@ from disk (`file://`). Supported browsers: Chrome, Edge, Firefox (all first-clas
 - PR description: what changed, how it was tested, screenshots for UI changes.
 - The maintainer reviews and merges every PR. Start the next slice from an up-to-date `main`.
 
+## Delivery
+
+- Merges to `main` deploy `dist/` to GitHub Pages (`.github/workflows/deploy.yml`).
+- Release: bump `version` in `package.json` in a PR, merge, then push tag `vX.Y.Z` on `main`.
+  `.github/workflows/release.yml` checks the tag matches `package.json`, runs every check and
+  publishes `pwnpoint-vX.Y.Z.html`, `SHA256SUMS` and a build provenance attestation.
+
 ## Definition of done (per PR)
 
 CI green; new logic has tests; no new network calls; dependencies justified; README updated
