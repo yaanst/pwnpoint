@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { APP_URL, expect, test } from './fixtures';
 
 test('opens from disk as a single file and renders', async ({ page }) => {
@@ -61,4 +62,10 @@ test('storage and crypto the app relies on work on file://', async ({ page }) =>
     return { secure: isSecureContext, idb, aes: key.algorithm.name };
   });
   expect(caps).toEqual({ secure: true, idb: 'ok', aes: 'AES-GCM' });
+});
+
+test('shows the version from package.json', async ({ page }) => {
+  const { version } = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string };
+  await page.goto(APP_URL);
+  await expect(page.getByText(`PwnPoint v${version}`)).toBeVisible();
 });
