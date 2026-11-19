@@ -1,0 +1,11 @@
+{
+  "$comment": "Exact URLs allowed to appear as text in dist/. Each entry needs a reason. They are never fetched: the CSP sets connect-src 'none'.",
+  "allow": [
+    { "url": "http://www.w3.org/2000/svg", "reason": "SVG XML namespace identifier (Preact)" },
+    {
+      "url": "http://www.w3.org/1998/Math/MathML",
+      "reason": "MathML XML namespace identifier (Preact)"
+    },
+    { "url": "http://www.w3.org/1999/xhtml", "reason": "XHTML XML namespace identifier (Preact)" }
+  ]
+}

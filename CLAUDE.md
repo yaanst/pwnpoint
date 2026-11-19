@@ -43,18 +43,25 @@ when behaviour changes.
 
 ## Commands
 
-| Command             | What it does                              |
-| ------------------- | ----------------------------------------- |
-| `npm ci`            | Install exactly what the lock file pins   |
-| `npm run dev`       | Dev server (no CSP, for development only) |
-| `npm run lint`      | ESLint + Prettier check                   |
-| `npm run format`    | Prettier write                            |
-| `npm run typecheck` | `tsc --noEmit` (strict)                   |
-| `npm test`          | Vitest unit tests                         |
-| `npm run build`     | Production build into `dist/`             |
+| Command              | What it does                                                     |
+| -------------------- | ---------------------------------------------------------------- |
+| `npm ci`             | Install exactly what the lock file pins                          |
+| `npm run dev`        | Dev server (no CSP, for development only)                        |
+| `npm run lint`       | ESLint + Prettier check                                          |
+| `npm run format`     | Prettier write                                                   |
+| `npm run typecheck`  | `tsc --noEmit` (strict)                                          |
+| `npm test`           | Vitest unit tests                                                |
+| `npm run build`      | Build the single file `dist/index.html`                          |
+| `npm run check:urls` | Fail on URLs in `dist/` not in `scripts/url-allowlist.json`      |
+| `npm run test:e2e`   | Playwright on the built file over `file://` (Chromium + Firefox) |
 
 ## Layout
 
 - `src/flags.ts`: feature flags.
+- `tools/single-file.ts`: build plugin that inlines all JS/CSS and injects the hash-based CSP.
+- `tests/e2e/fixtures.ts`: the local-only guard. Every e2e test fails if a request leaves the
+  device, a CSP violation fires or a page error occurs. Always import `test` from there.
+- Node-side code (tools, tests, scripts, configs) is typechecked with `tsconfig.node.json`;
+  app code in `src/` with `tsconfig.json` (no Node types).
 - `src/cvss/`: pure CVSS 3.1 module (milestone 1).
 - Pure logic lives in plain `.ts` modules with colocated `*.test.ts` files; UI in `.tsx`.
