@@ -64,3 +64,231 @@ body {
   color: var(--text-muted);
   font-size: 0.875rem;
 }
+
+/* Severity colours: each pair meets WCAG AA (≥ 4.5:1) for badge text. */
+:root {
+  --sev-none-bg: #5b6270;
+  --sev-none-fg: #ffffff;
+  --sev-low-bg: #2e7d32;
+  --sev-low-fg: #ffffff;
+  --sev-medium-bg: #f2c230;
+  --sev-medium-fg: #1a1d23;
+  --sev-high-bg: #c2410c;
+  --sev-high-fg: #ffffff;
+  --sev-critical-bg: #a4161a;
+  --sev-critical-fg: #ffffff;
+  --danger: #b3261e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --danger: #ff8a80;
+  }
+}
+
+:root[data-theme='dark'] {
+  --danger: #ff8a80;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.35rem 0.75rem;
+}
+
+input[type='text'] {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 0.35rem 0.6rem;
+}
+
+.badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.1rem 0.7rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.sev-none {
+  background: var(--sev-none-bg);
+  color: var(--sev-none-fg);
+}
+.sev-low {
+  background: var(--sev-low-bg);
+  color: var(--sev-low-fg);
+}
+.sev-medium {
+  background: var(--sev-medium-bg);
+  color: var(--sev-medium-fg);
+}
+.sev-high {
+  background: var(--sev-high-bg);
+  color: var(--sev-high-fg);
+}
+.sev-critical {
+  background: var(--sev-critical-bg);
+  color: var(--sev-critical-fg);
+}
+
+/* CVSS calculator */
+.cvss {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+}
+
+.cvss h2 {
+  margin-top: 0;
+  font-size: 1.15rem;
+}
+
+.cvss-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+  gap: 0.75rem 1.5rem;
+}
+
+.metric-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.metric-label abbr {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 400;
+}
+
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+}
+
+.segment {
+  position: relative;
+}
+
+.segment button {
+  border-radius: 0;
+  margin-left: -1px;
+}
+
+.segment:first-child button {
+  border-radius: var(--radius) 0 0 var(--radius);
+  margin-left: 0;
+}
+
+.segment:last-child button {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+/* Selected state: filled with the accent colour and a check mark, not colour alone. */
+.segment button[aria-checked='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+  position: relative;
+  z-index: 1;
+}
+
+.segment button[aria-checked='true']::before {
+  content: '✓ ';
+}
+
+.segment button:focus-visible {
+  z-index: 2;
+}
+
+.segment-code {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  opacity: 0.8;
+}
+
+.tooltip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 10;
+  width: 20rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius);
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.segment button:hover + .tooltip,
+.segment button:focus-visible + .tooltip,
+.segment .tooltip:hover {
+  display: block;
+}
+
+.segmented.tips-hidden .segment .tooltip {
+  display: none;
+}
+
+.cvss-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0 1rem;
+}
+
+.cvss-score {
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.cvss-vector {
+  font-family: var(--font-mono);
+  user-select: all;
+  background: var(--surface);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius);
+}
+
+.vector-paste label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.vector-paste-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.vector-paste-row input {
+  flex: 1;
+  max-width: 32rem;
+  font-family: var(--font-mono);
+}
+
+.errors {
+  color: var(--danger);
+  margin: 0.4rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.errors:empty {
+  display: none;
+}
