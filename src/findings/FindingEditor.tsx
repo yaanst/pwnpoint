@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { calculateBaseScore, type Severity } from '../cvss/cvss31';
 import { CvssCalculator } from '../cvss/CvssCalculator';
+import { EvidencePanel } from '../evidence/EvidencePanel';
 import type { Vault } from '../storage/vault';
 import { LinesField, RichTextField, StepsField } from '../ui/fields';
 import {
@@ -145,6 +146,8 @@ function FindingEditor({ vault, initial }: { vault: Vault; initial: Finding }) {
         value={f.references}
         onChange={(references) => update({ references })}
       />
+
+      <EvidencePanel vault={vault} finding={f} />
 
       <CvssCalculator value={f.cvss} onChange={(cvss) => update({ cvss })} />
 

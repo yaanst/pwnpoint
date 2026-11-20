@@ -14,6 +14,8 @@ export default tseslint.config(
       'no-eval': 'error',
       'no-implied-eval': 'error',
       'no-new-func': 'error',
+      // `const { dropped: _dropped, ...rest } = obj` is the idiomatic way to omit a field.
+      '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
       // Local-only rule: never turn user text into markup.
       'no-restricted-syntax': [
         'error',

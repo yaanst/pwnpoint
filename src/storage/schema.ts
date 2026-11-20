@@ -17,6 +17,8 @@ export interface StoredRecord {
   findingId?: string;
   updatedAt: number;
   payload: { sealed: Sealed } | { plain: unknown };
+  /** Optional binary content (e.g. an evidence image), sealed separately from the JSON payload. */
+  bytes?: { sealed: Sealed } | { plain: Uint8Array<ArrayBuffer> };
 }
 
 export type StorageMode = 'encrypted' | 'plain';
