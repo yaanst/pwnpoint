@@ -12,8 +12,12 @@ PwnPoint is built for confidential client data:
 - It is a **single HTML file** that runs entirely in your browser, opened from disk.
 - It makes **no network requests**. A strict Content Security Policy blocks them, and CI
   checks it.
-- Your data stays on your device: in browser storage (encrypted by default) and in mission
-  files you save yourself.
+- Your data stays on your device: in browser storage and in mission files you save yourself.
+- **Encrypted at rest by default.** On first run PwnPoint asks for a passphrase and encrypts
+  everything it stores with AES-GCM 256 (key derived with PBKDF2-SHA256, 600,000 iterations).
+  You enter the passphrase each time you open PwnPoint. There is no recovery if you forget it.
+- You can turn encryption off in Settings after acknowledging the risk: browsers share storage
+  between all local HTML files, so any other file you open from disk could read clear data.
 
 Supported browsers: Chrome, Edge and Firefox (desktop).
 

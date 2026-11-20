@@ -76,4 +76,7 @@ when behaviour changes.
 - `src/storage/schema.ts`: IndexedDB schema. `MIGRATIONS[n]` upgrades version n → n+1; never edit a
   released migration, append one.
 - `src/storage/vault.ts`: the only way to read/write user data (setup / locked / ready, seals records).
+- `src/storage/VaultGate.tsx`: first-run setup, unlock screen; renders the app only when ready.
+  e2e tests start with `openWithNewVault(page)` from the fixtures.
+- `src/settings/`: Settings panels. `src/ui/router.ts`: tiny hash router (`#/settings`).
 - Pure logic lives in plain `.ts` modules with colocated `*.test.ts` files; UI in `.tsx`.
