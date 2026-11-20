@@ -258,7 +258,7 @@ export function EvidencePanel({ vault, finding }: { vault: Vault; finding: Findi
                   <button
                     type="button"
                     class="small"
-                    aria-label={`Redact or crop evidence ${i + 1}`}
+                    aria-label={`Redact / crop evidence ${i + 1}`}
                     onClick={() => setEditing(e)}
                   >
                     Redact / crop

@@ -112,6 +112,10 @@ when behaviour changes.
 - Local Firefox e2e: `PLAYWRIGHT_BROWSERS_PATH=<dir> npx playwright install firefox`, then run
   `npm run test:e2e -- --project=firefox` with the same variable.
 - `src/findings/pendingSaves.ts`: wrap every async save in `trackSave()`; readers call `whenSaved()`.
+- `src/ui/prefs.ts`: localStorage UI preferences (colour mode, onboarding tip), safe when storage is
+  blocked. `EmptyState.tsx`, `OnboardingTip.tsx`.
+- Accessibility: `tests/e2e/a11y.spec.ts` runs axe-core (dev dependency, injected by the test, never
+  shipped) on every page in light and dark mode. Add new pages and dialogs to it.
 - `src/settings/`: Settings panels. `src/ui/router.ts`: hash router (`matchRoute`: `#/findings`,
   `#/findings/<id>`, `#/scenarios`, `#/scenarios/<id>`, `#/cvss`, `#/settings`).
 - Pure logic lives in plain `.ts` modules with colocated `*.test.ts` files; UI in `.tsx`.

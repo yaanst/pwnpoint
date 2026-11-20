@@ -63,7 +63,7 @@ test('builds a scenario from 4 findings, reorders it and exports it', async ({ p
   await addFinding(page, 'Domain admin password reuse', 'High'); // VLN.04
 
   await page.getByRole('link', { name: 'Scenarios' }).click();
-  await expect(page.getByText('No scenarios in this project yet.')).toBeVisible();
+  await expect(page.getByText('No scenarios in this project yet')).toBeVisible();
   await page.getByRole('button', { name: '+ New scenario' }).click();
   await expect(page.getByRole('heading', { name: /SCN\.01/ })).toBeVisible();
   await page.getByLabel('Title', { exact: true }).fill('From the guest Wi-Fi to domain admin');
