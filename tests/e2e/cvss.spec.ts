@@ -1,11 +1,11 @@
-import { APP_URL, expect, test } from './fixtures';
+import { expect, openWithNewVault, test } from './fixtures';
 
 const score = (page: import('@playwright/test').Page) => page.getByTestId('cvss-score');
 const severity = (page: import('@playwright/test').Page) => page.getByTestId('cvss-severity');
 const vector = (page: import('@playwright/test').Page) => page.getByTestId('cvss-vector');
 
 test.beforeEach(async ({ page }) => {
-  await page.goto(APP_URL);
+  await openWithNewVault(page);
 });
 
 test('starts at 0.0 / None and updates live when toggles are clicked', async ({ page }) => {
