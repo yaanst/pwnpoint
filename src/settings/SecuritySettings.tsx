@@ -2,7 +2,11 @@ import { useEffect, useState } from 'preact/hooks';
 import { WrongPassphraseError } from '../storage/crypto';
 import { passphraseProblems } from '../storage/passphrase';
 import { Errors, PassphraseFields } from '../storage/PassphraseFields';
-import { type PersistenceStatus, requestPersistence } from '../storage/persistence';
+import {
+  type PersistenceStatus,
+  persistenceStatus,
+  requestPersistence,
+} from '../storage/persistence';
 import type { Vault } from '../storage/vault';
 import { notifyVaultChanged } from '../storage/VaultGate';
 import { PlainStorageRisk, RiskDialog } from '../ui/RiskDialog';
@@ -16,12 +20,13 @@ const PERSISTENCE_TEXT: Record<PersistenceStatus, string> = {
 
 export function SecuritySettings({ vault }: { vault: Vault }) {
   const [persistence, setPersistence] = useState<PersistenceStatus | null>(null);
+  const [asking, setAsking] = useState(false);
   const [encrypted, setEncrypted] = useState(vault.encrypted);
   const [askDisable, setAskDisable] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    void requestPersistence().then(setPersistence);
+    void persistenceStatus().then(setPersistence);
   }, []);
 
   const disable = async () => {
@@ -79,6 +84,25 @@ export function SecuritySettings({ vault }: { vault: Vault }) {
       <p data-testid="persistence-status">
         {persistence ? PERSISTENCE_TEXT[persistence] : 'Checking…'}
       </p>
+      {persistence === 'best-effort' && (
+        <p class="row">
+          <button
+            type="button"
+            disabled={asking}
+            onClick={() => {
+              setAsking(true);
+              void requestPersistence().then((status) => {
+                setPersistence(status);
+                setAsking(false);
+              });
+            }}
+          >
+            {asking
+              ? 'Waiting for your answer in the browser…'
+              : 'Ask the browser to keep this data'}
+          </button>
+        </p>
+      )}
 
       {askDisable && (
         <RiskDialog

@@ -1,15 +1,28 @@
 export type PersistenceStatus = 'persistent' | 'best-effort' | 'unsupported';
 
+const storage = () => globalThis.navigator?.storage;
+
+/** Current status, read-only: never prompts the user (navigator.storage.persisted). */
+export async function persistenceStatus(): Promise<PersistenceStatus> {
+  const s = storage();
+  if (!s?.persisted) return 'unsupported';
+  try {
+    return (await s.persisted()) ? 'persistent' : 'best-effort';
+  } catch {
+    return 'unsupported';
+  }
+}
+
 /**
- * Asks the browser not to evict PwnPoint's storage under pressure (navigator.storage.persist).
- * Browsers may refuse silently; the result is shown in Settings.
+ * Asks the browser not to evict PwnPoint's storage (navigator.storage.persist).
+ * Firefox shows a permission prompt and only resolves once the user answers it, so callers
+ * must not block the UI on this.
  */
 export async function requestPersistence(): Promise<PersistenceStatus> {
-  const storage = globalThis.navigator?.storage;
-  if (!storage?.persist) return 'unsupported';
+  const s = storage();
+  if (!s?.persist) return 'unsupported';
   try {
-    if (await storage.persisted()) return 'persistent';
-    return (await storage.persist()) ? 'persistent' : 'best-effort';
+    return (await s.persist()) ? 'persistent' : 'best-effort';
   } catch {
     return 'unsupported';
   }
