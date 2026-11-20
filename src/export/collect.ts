@@ -1,5 +1,7 @@
 import { getEvidenceBytes, listEvidence } from '../evidence/repository';
 import { type Finding, type Project, sortForReport } from '../findings/model';
+import { layoutScenario, type ScenarioLayout } from '../scenarios/layout';
+import { type Scenario, scenarioRef } from '../scenarios/model';
 import { buildCoverSlide, buildFindingSlide, type Slide } from '../slides/layout';
 import type { SlideTheme } from '../slides/theme';
 import type { Measure } from '../slides/wrap';
@@ -50,7 +52,10 @@ export async function findingBundle(
   return bundle;
 }
 
-/** A project deck: a cover, then one slide per finding in report order (severity, score). */
+/**
+ * A project deck: a cover, one slide per finding in report order (severity, score), then the
+ * attack scenarios. Scenarios that do not fit on two slides are left out and listed in `skipped`.
+ */
 export async function projectBundle(
   vault: Vault,
   project: Project,
@@ -58,12 +63,32 @@ export async function projectBundle(
   theme: SlideTheme,
   measure: Measure,
   date: string,
-): Promise<SlideBundle & { ordered: Finding[] }> {
+  scenarios: Scenario[] = [],
+  allFindings: Finding[] = findings,
+): Promise<SlideBundle & { ordered: Finding[]; skipped: string[] }> {
   const ordered = sortForReport(findings);
   const bundle = emptyBundle(theme);
   bundle.slides.push(buildCoverSlide(project.name, date, ordered.length, theme, measure));
   for (const f of ordered) await addFinding(bundle, vault, f, theme, measure);
-  return { ...bundle, ordered };
+  const byId = new Map(allFindings.map((f) => [f.id, f]));
+  const skipped: string[] = [];
+  for (const s of scenarios) {
+    const layout = layoutScenario(s, byId, theme, measure);
+    if (layout.blocked) skipped.push(scenarioRef(s.number));
+    else bundle.slides.push(...layout.slides);
+  }
+  return { ...bundle, ordered, skipped };
+}
+
+/** One scenario's slides (one or two) with the logo. */
+export function scenarioBundle(
+  scenario: Scenario,
+  findings: Finding[],
+  theme: SlideTheme,
+  measure: Measure,
+): SlideBundle & { layout: ScenarioLayout } {
+  const layout = layoutScenario(scenario, new Map(findings.map((f) => [f.id, f])), theme, measure);
+  return { ...emptyBundle(theme), slides: layout.slides, layout };
 }
 
 /** A file name safe on every OS: letters, digits, dots and dashes. */

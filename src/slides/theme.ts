@@ -1,4 +1,5 @@
 import type { Severity } from '../cvss/cvss31';
+import type { Level } from '../scenarios/model';
 
 export type SlideLanguage = 'en' | 'fr';
 
@@ -60,6 +61,24 @@ export interface SlideLabels {
   overrideReason: string;
   coverSubtitle: string;
   findingCount: (n: number) => string;
+  scenario: {
+    untitled: string;
+    start: string;
+    goal: string;
+    context: string;
+    breakChain: string;
+    path: string;
+    impact: string;
+    likelihood: string;
+    levels: { impact: Record<Level, string>; likelihood: Record<Level, string> };
+    technique: string;
+    chainBreaker: string;
+    missing: string;
+    noSteps: string;
+    continuedOn: string;
+    continuedFrom: string;
+    gains: string;
+  };
 }
 
 export const LABELS: Record<SlideLanguage, SlideLabels> = {
@@ -80,6 +99,32 @@ export const LABELS: Record<SlideLanguage, SlideLabels> = {
     overrideReason: 'Severity adjusted',
     coverSubtitle: 'Security assessment: findings',
     findingCount: (n) => `${n} finding${n === 1 ? '' : 's'}`,
+    scenario: {
+      untitled: 'Untitled scenario',
+      start: 'Starting position',
+      goal: 'Goal',
+      context: 'Context',
+      breakChain: 'Break the chain',
+      path: 'Attack path',
+      impact: 'Impact',
+      likelihood: 'Likelihood',
+      levels: {
+        impact: { Critical: 'Critical', High: 'High', Medium: 'Medium', Low: 'Low' },
+        likelihood: {
+          Critical: 'Very likely',
+          High: 'Likely',
+          Medium: 'Possible',
+          Low: 'Unlikely',
+        },
+      },
+      technique: 'Technique',
+      chainBreaker: 'Chain breaker',
+      missing: 'Missing finding',
+      noSteps: 'No steps yet.',
+      continuedOn: 'Continued on the next slide →',
+      continuedFrom: '← Continued from the previous slide',
+      gains: 'Gains',
+    },
   },
   fr: {
     description: 'Description',
@@ -104,6 +149,27 @@ export const LABELS: Record<SlideLanguage, SlideLabels> = {
     overrideReason: 'Sévérité ajustée',
     coverSubtitle: 'Audit de sécurité : vulnérabilités',
     findingCount: (n) => `${n} vulnérabilité${n > 1 ? 's' : ''}`,
+    scenario: {
+      untitled: 'Scénario sans titre',
+      start: 'Position de départ',
+      goal: 'Objectif',
+      context: 'Contexte',
+      breakChain: 'Briser la chaîne',
+      path: 'Chemin d’attaque',
+      impact: 'Impact',
+      likelihood: 'Vraisemblance',
+      levels: {
+        impact: { Critical: 'Critique', High: 'Élevé', Medium: 'Moyen', Low: 'Faible' },
+        likelihood: { Critical: 'Très forte', High: 'Forte', Medium: 'Moyenne', Low: 'Faible' },
+      },
+      technique: 'Technique',
+      chainBreaker: 'Point de rupture',
+      missing: 'Vulnérabilité supprimée',
+      noSteps: 'Aucune étape pour l’instant.',
+      continuedOn: 'Suite sur la diapositive suivante →',
+      continuedFrom: '← Suite de la diapositive précédente',
+      gains: 'Gain',
+    },
   },
 };
 

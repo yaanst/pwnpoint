@@ -3,6 +3,8 @@ import { type BaseMetrics } from './cvss/cvss31';
 import { CvssCalculator } from './cvss/CvssCalculator';
 import { FindingEditorPage } from './findings/FindingEditor';
 import { FindingsPage } from './findings/FindingsPage';
+import { ScenarioEditorPage } from './scenarios/ScenarioEditor';
+import { ScenariosPage } from './scenarios/ScenariosPage';
 import { DEFAULT_CVSS } from './findings/model';
 import { guardUnloadWhileSaving } from './findings/pendingSaves';
 import { SecuritySettings } from './settings/SecuritySettings';
@@ -23,6 +25,10 @@ export function App() {
         return <FindingsPage vault={vault} />;
       case 'finding':
         return <FindingEditorPage vault={vault} id={page.id} />;
+      case 'scenarios':
+        return <ScenariosPage vault={vault} />;
+      case 'scenario':
+        return <ScenarioEditorPage vault={vault} id={page.id} />;
       case 'cvss':
         return <CvssCalculator value={metrics} onChange={setMetrics} />;
       case 'settings':
@@ -48,6 +54,9 @@ export function App() {
         <nav aria-label="Main">
           <a href="#/findings" aria-current={current(['findings', 'finding'])}>
             Findings
+          </a>
+          <a href="#/scenarios" aria-current={current(['scenarios', 'scenario'])}>
+            Scenarios
           </a>
           <a href="#/cvss" aria-current={current(['cvss'])}>
             CVSS calculator

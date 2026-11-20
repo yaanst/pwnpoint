@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import type { Finding, Project } from '../findings/model';
 import { canvasMeasure } from '../slides/measure';
+import { listScenarios } from '../scenarios/repository';
 import { loadTheme } from '../slides/themeStore';
 import type { Vault } from '../storage/vault';
 import {
@@ -28,6 +29,7 @@ export function ProjectExport({
   findings: Finding[];
 }) {
   const [validatedOnly, setValidatedOnly] = useState(true);
+  const [withScenarios, setWithScenarios] = useState(true);
   const [busy, setBusy] = useState<Action | null>(null);
   const [status, setStatus] = useState('');
   const selected = validatedOnly ? findings.filter((f) => f.status === 'validated') : findings;
@@ -40,7 +42,20 @@ export function ProjectExport({
       const theme = await loadTheme(vault);
       const now = new Date();
       const date = new Intl.DateTimeFormat(langTag(theme), { dateStyle: 'long' }).format(now);
-      const bundle = await projectBundle(vault, project, selected, theme, canvasMeasure, date);
+      const scenarios = withScenarios ? await listScenarios(vault, project.id) : [];
+      const bundle = await projectBundle(
+        vault,
+        project,
+        selected,
+        theme,
+        canvasMeasure,
+        date,
+        scenarios,
+        findings,
+      );
+      const skipped = bundle.skipped.length
+        ? ` Left out (too long for 2 slides): ${bundle.skipped.join(', ')}.`
+        : '';
       if (action === 'pptx') {
         const bytes = buildPptx(bundle.slides, bundle.images, {
           title: project.name,
@@ -54,8 +69,9 @@ export function ProjectExport({
         setStatus(
           `Deck downloaded: ${bundle.slides.length} slides.` +
             (flagged.length
-              ? ` Text does not fit on slide${flagged.length > 1 ? 's' : ''} ${flagged.join(', ')}: check ${flagged.length > 1 ? 'them' : 'it'} in the editor.`
-              : ''),
+              ? ` Check the warnings on slide${flagged.length > 1 ? 's' : ''} ${flagged.join(', ')} in the editor.`
+              : '') +
+            skipped,
         );
       } else {
         const md = projectMarkdown(
@@ -65,6 +81,8 @@ export function ProjectExport({
             captions: bundle.captions.get(finding.id) ?? [],
           })),
           theme.language,
+          scenarios,
+          new Map(findings.map((f) => [f.id, f])),
         );
         if (action === 'md-copy') {
           await copyText(md);
@@ -104,6 +122,14 @@ export function ProjectExport({
             onChange={(e) => setValidatedOnly(e.currentTarget.checked)}
           />{' '}
           Validated findings only
+        </label>
+        <label class="checkbox">
+          <input
+            type="checkbox"
+            checked={withScenarios}
+            onChange={(e) => setWithScenarios(e.currentTarget.checked)}
+          />{' '}
+          Include attack scenarios
         </label>
         <p class="muted small-text">
           {selected.length} of {findings.length} finding{findings.length === 1 ? '' : 's'} will be
