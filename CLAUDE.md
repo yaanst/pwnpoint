@@ -81,5 +81,7 @@ when behaviour changes.
   e2e tests start with `openWithNewVault(page)` from the fixtures.
 - `src/text/markdownLite.ts`: the only free-text formatting (bold, code, bullets) → a tree, never
   HTML. Render it with `<MarkdownLite>`. ESLint bans `dangerouslySetInnerHTML`, `innerHTML` & co.
+- `src/findings/`: finding model (`VLN.NN` refs, effective severity, filters) and repository on
+  the vault. Finding numbers come from a per-project counter and are never reused.
 - `src/settings/`: Settings panels. `src/ui/router.ts`: tiny hash router (`#/settings`).
 - Pure logic lives in plain `.ts` modules with colocated `*.test.ts` files; UI in `.tsx`.
