@@ -26,6 +26,16 @@ async function pick(page: Page, query: string) {
 
 const stepTitles = (page: Page) => page.locator('.scenario-step .step-head a').allTextContents();
 const preview = (page: Page) => page.getByRole('img', { name: /^Scenario slide 1 of/ });
+/**
+ * Slide text without whitespace: where a label wraps depends on the installed fonts, and SVG
+ * lines are separate <text> elements, so line breaks leave no space between words.
+ */
+const squash = (t: string) => t.replace(/\s+/g, '');
+async function expectOnSlide(page: Page, text: string) {
+  await expect
+    .poll(async () => squash((await preview(page).textContent()) ?? ''))
+    .toContain(squash(text));
+}
 
 async function recordClipboard(page: Page) {
   await page.evaluate(() => {
@@ -112,11 +122,11 @@ test('builds a scenario from 4 findings, reorders it and exports it', async ({ p
 
   // Preview: one slide, flow, chain breaker, "Break the chain".
   await expect(page.getByTestId('scenario-fit')).toContainText('Fits on one slide');
-  await expect(preview(page)).toContainText('LLMNR poisoning');
-  await expect(preview(page)).toContainText('→ NetNTLMv2 hashes');
-  await expect(preview(page)).toContainText('5. Technique · T1003.006');
-  await expect(preview(page)).toContainText('Break the chain');
-  await expect(preview(page)).toContainText('Disable LLMNR and NBT-NS by GPO.');
+  await expectOnSlide(page, 'LLMNR poisoning');
+  await expectOnSlide(page, '→ NetNTLMv2 hashes');
+  await expectOnSlide(page, '5. Technique · T1003.006');
+  await expectOnSlide(page, 'Break the chain');
+  await expectOnSlide(page, 'Disable LLMNR and NBT-NS by GPO.');
   await expect(page.getByTestId('slide-warnings')).toHaveText('Everything fits.');
 
   // PPTX with native shapes: 5 nodes, 4 arrows.
@@ -154,7 +164,7 @@ test('builds a scenario from 4 findings, reorders it and exports it', async ({ p
   await expect(page.getByTestId('slide-warnings')).toContainText(
     'Step 2 points to a deleted finding.',
   );
-  await expect(preview(page)).toContainText('2. Missing finding · Chain breaker');
+  await expectOnSlide(page, '2. Missing finding · Chain breaker');
 });
 
 test('adds scenarios to the project deck', async ({ page }) => {
