@@ -113,3 +113,21 @@ export async function pngToPixels(bytes: Uint8Array<ArrayBuffer>) {
   const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
   return { data: img.data, width: img.width, height: img.height };
 }
+
+/** A logo: same metadata-stripping pipeline, kept small (at most 800 px wide). */
+export async function processLogo(file: Blob): Promise<ProcessedImage> {
+  if (!ACCEPTED_TYPES.includes(file.type)) {
+    throw new ImageImportError('Use a PNG, JPEG, WebP, GIF or BMP image for the logo.');
+  }
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch {
+    throw new ImageImportError('This image could not be read.');
+  }
+  const { width, height } = fitWithin(bitmap.width, bitmap.height, 800);
+  return drawToPng(bitmap, width, height, {
+    originalWidth: bitmap.width,
+    originalHeight: bitmap.height,
+  });
+}

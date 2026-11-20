@@ -91,6 +91,12 @@ when behaviour changes.
   `EvidencePanel.tsx`. Use `vault.put(…, bytes)` / `vault.getBytes` for binary content.
   Redaction/crop: pure pixel ops in `edits.ts`, UI in `RedactionEditor.tsx` (apply → review →
   replace; the original is kept until the user confirms).
+- `src/slides/`: one slide model drives every output. `layout.ts` (pure: finding + theme +
+  `Measure` → positioned elements, wrapped lines, overflow warnings; never shrinks text below
+  `theme.minFontPt`), `wrap.ts`, `measure.ts` (canvas), `SlideSvg.tsx` (preview), `theme.ts`
+  (EN/FR labels), `themeStore.ts` (vault storage + strict JSON import). Tests use `testing.ts`.
+- Local Firefox e2e: `PLAYWRIGHT_BROWSERS_PATH=<dir> npx playwright install firefox`, then run
+  `npm run test:e2e -- --project=firefox` with the same variable.
 - `src/findings/pendingSaves.ts`: wrap every async save in `trackSave()`; readers call `whenSaved()`.
 - `src/settings/`: Settings panels. `src/ui/router.ts`: hash router (`matchRoute`: `#/findings`,
   `#/findings/<id>`, `#/cvss`, `#/settings`).

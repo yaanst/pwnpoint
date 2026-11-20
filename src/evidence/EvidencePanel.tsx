@@ -5,6 +5,7 @@ import { formatBytes, storageUsage, storageWarning } from '../storage/usage';
 import { trackSave } from '../findings/pendingSaves';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { createDebouncer } from '../ui/debounce';
+import { emit } from '../ui/events';
 import { ACCEPTED_TYPES, ImageImportError, MAX_WIDTH, processImage } from './image';
 import { RedactionEditor } from './RedactionEditor';
 import {
@@ -49,7 +50,10 @@ export function EvidencePanel({ vault, finding }: { vault: Vault; finding: Findi
   const dragIndex = useRef<number | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const refresh = async () => setItems(await listEvidence(vault, finding.id));
+  const refresh = async () => {
+    setItems(await listEvidence(vault, finding.id));
+    emit('evidence-changed');
+  };
 
   useEffect(() => {
     void refresh();
@@ -123,7 +127,10 @@ export function EvidencePanel({ vault, finding }: { vault: Vault; finding: Findi
 
   const reorder = async (from: number, to: number) => {
     const next = moveItem(items, from, to);
-    if (next !== items) setItems(await saveOrder(vault, next));
+    if (next !== items) {
+      setItems(await saveOrder(vault, next));
+      emit('evidence-changed');
+    }
   };
 
   const hasFiles = (e: DragEvent) => !!e.dataTransfer?.types.includes('Files');
@@ -223,6 +230,7 @@ export function EvidencePanel({ vault, finding }: { vault: Vault; finding: Findi
                     await trackSave(saveEvidence(vault, next));
                     setItems((list) => list.map((x) => (x.id === e.id ? next : x)));
                     setMessage('Caption saved.');
+                    emit('evidence-changed');
                   }}
                 />
                 <span class="muted small-text">
@@ -279,6 +287,7 @@ export function EvidencePanel({ vault, finding }: { vault: Vault; finding: Findi
             setEditing(null);
             setItems((list) => list.map((x) => (x.id === updated.id ? updated : x)));
             setMessage('Image replaced with the redacted version.');
+            emit('evidence-changed');
           }}
         />
       )}
