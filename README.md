@@ -4,8 +4,8 @@ Turn a pentest finding (CVSS 3.1 score + screenshot evidence) into a client-read
 chain findings into full compromise scenarios shown as a flow on one slide.
 
 > **Status:** early development. Working today: projects and findings (editor, list, filters),
-> CVSS 3.1 scoring, evidence screenshots with redaction, and a live slide preview with a custom
-> theme. Slide export, scenarios and backups are coming next.
+> CVSS 3.1 scoring, evidence screenshots with redaction, a live slide preview with a custom
+> theme, and export to PowerPoint, PNG and Markdown. Scenarios and backups are coming next.
 
 ## Evidence screenshots
 
@@ -26,6 +26,19 @@ never shrunk to fit: when a section overflows, the preview marks it and says by 
 **Settings → Slide theme** sets the language of the slide labels (English or French), system
 fonts, colours (with a contrast check), severity badge colours, the footer, the smallest font
 size and an optional logo. Themes can be exported and imported as JSON files.
+
+### Export
+
+- **One finding** (under its slide preview): download a `.pptx`, download or copy the slide as
+  a PNG (1920 × 1080), or copy it as Markdown.
+- **A whole project** (**Export project** under the findings list): a `.pptx` deck with a cover
+  slide and one slide per finding, ordered by severity, or the findings as one Markdown file.
+  By default only validated findings are exported.
+
+PowerPoint files are written by PwnPoint itself (no third-party library): every title, text
+box, badge and line is a native, editable shape, and images carry their caption as alternative
+text. The slide image shows the first two screenshots; Markdown lists every caption. Exports
+warn when text does not fit on a slide.
 
 ## Privacy model
 

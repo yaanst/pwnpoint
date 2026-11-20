@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { type Finding, newFinding } from '../findings/model';
 import {
+  buildCoverSlide,
   buildFindingSlide,
   fitImage,
   SLIDE_H,
@@ -147,5 +148,47 @@ describe('fitImage', () => {
   it('fits and centres keeping the ratio', () => {
     expect(fitImage(200, 100, { x: 0, y: 0, w: 4, h: 4 })).toEqual({ x: 0, y: 1, w: 4, h: 2 });
     expect(fitImage(100, 200, { x: 0, y: 0, w: 4, h: 4 })).toEqual({ x: 1, y: 0, w: 2, h: 4 });
+  });
+});
+
+describe('evidence on the slide', () => {
+  const ev = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      id: `e${i}`,
+      width: 800,
+      height: 600,
+      caption: i ? '' : 'Login',
+    }));
+  it('gives images alt text from the caption, or a numbered figure label', () => {
+    const s = buildFindingSlide(finding(), ev(2), DEFAULT_THEME, fakeMeasure);
+    const alts = s.elements.flatMap((e) => (e.kind === 'image' ? [e.alt] : []));
+    expect(alts).toEqual(['Login', 'Figure 2']);
+  });
+  it('warns when some images do not fit on the slide', () => {
+    const s = buildFindingSlide(finding(), ev(3), DEFAULT_THEME, fakeMeasure);
+    expect(s.warnings).toContain(
+      'Only the first 2 of 3 images fit on the slide. Reorder them to choose.',
+    );
+    expect(s.elements.filter((e) => e.kind === 'image')).toHaveLength(2);
+  });
+});
+
+describe('buildCoverSlide', () => {
+  it('shows the project, subtitle, date and count in the slide language', () => {
+    const s = buildCoverSlide(
+      'ACME',
+      '20 novembre 2026',
+      3,
+      { ...DEFAULT_THEME, language: 'fr' },
+      fakeMeasure,
+    );
+    expect(textOf(first(s, 'cover-title'))).toBe('ACME');
+    expect(textOf(first(s, 'cover-subtitle'))).toBe('Audit de sécurité : vulnérabilités');
+    expect(textOf(first(s, 'cover-meta'))).toBe('20 novembre 2026 · 3 vulnérabilités');
+    expect(s.warnings).toEqual([]);
+  });
+  it('warns when the project name needs more than two lines', () => {
+    const s = buildCoverSlide('x '.repeat(200), 'today', 1, DEFAULT_THEME, fakeMeasure);
+    expect(s.warnings).toEqual(['The project name is too long for the cover. Shorten it.']);
   });
 });

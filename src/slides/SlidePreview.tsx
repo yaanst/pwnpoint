@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { type Evidence, listEvidence } from '../evidence/repository';
+import { FindingExport } from '../export/FindingExport';
 import type { Finding } from '../findings/model';
 import type { Vault } from '../storage/vault';
 import { on } from '../ui/events';
@@ -37,7 +38,7 @@ export function SlidePreview({ vault, finding }: { vault: Vault; finding: Findin
   return (
     <section class="slide-preview" aria-labelledby="slide-preview-title">
       <h3 id="slide-preview-title">Slide preview</h3>
-      {slide ? (
+      {slide && theme ? (
         <>
           <div class="slide-frame">
             <SlideSvg
@@ -57,6 +58,7 @@ export function SlidePreview({ vault, finding }: { vault: Vault; finding: Findin
               Everything fits on the slide.
             </p>
           )}
+          <FindingExport vault={vault} finding={finding} theme={theme} />
         </>
       ) : (
         <p aria-busy="true">Loading…</p>

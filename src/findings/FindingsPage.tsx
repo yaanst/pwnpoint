@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { calculateBaseScore, type Severity } from '../cvss/cvss31';
+import { ProjectExport } from '../export/ProjectExport';
 import type { Vault } from '../storage/vault';
 import { findingHref } from '../ui/router';
 import { DeleteFindingDialog } from './DeleteFindingDialog';
@@ -172,6 +173,7 @@ export function FindingsPage({ vault }: { vault: Vault }) {
                   onDelete={setToDelete}
                 />
               )}
+              {project && <ProjectExport vault={vault} project={project} findings={findings} />}
             </>
           )}
         </>
