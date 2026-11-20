@@ -6,6 +6,7 @@ const vector = (page: import('@playwright/test').Page) => page.getByTestId('cvss
 
 test.beforeEach(async ({ page }) => {
   await openWithNewVault(page);
+  await page.getByRole('link', { name: 'CVSS calculator' }).click();
 });
 
 test('starts at 0.0 / None and updates live when toggles are clicked', async ({ page }) => {

@@ -62,5 +62,9 @@ export async function openWithNewVault(page: import('@playwright/test').Page): P
   await page.getByLabel('Passphrase', { exact: true }).fill(TEST_PASSPHRASE);
   await page.getByLabel('Type it again').fill(TEST_PASSPHRASE);
   await page.getByRole('button', { name: 'Encrypt and continue' }).click();
-  await expect(page.getByRole('heading', { name: 'CVSS 3.1 base score' })).toBeVisible();
+  await expect(appHome(page)).toBeVisible();
 }
+
+/** The first screen once the vault is ready. */
+export const appHome = (page: import('@playwright/test').Page) =>
+  page.getByRole('heading', { name: 'Findings', level: 2 });

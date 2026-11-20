@@ -1,7 +1,6 @@
-import { APP_URL, expect, openWithNewVault, test, TEST_PASSPHRASE } from './fixtures';
+import { APP_URL, appHome, expect, openWithNewVault, test, TEST_PASSPHRASE } from './fixtures';
 
-const calculator = (page: import('@playwright/test').Page) =>
-  page.getByRole('heading', { name: 'CVSS 3.1 base score' });
+const calculator = appHome; // the app's first screen once unlocked
 
 test('first run asks for a passphrase and validates it', async ({ page }) => {
   await page.goto(APP_URL);

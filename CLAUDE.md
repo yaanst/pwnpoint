@@ -83,5 +83,8 @@ when behaviour changes.
   HTML. Render it with `<MarkdownLite>`. ESLint bans `dangerouslySetInnerHTML`, `innerHTML` & co.
 - `src/findings/`: finding model (`VLN.NN` refs, effective severity, filters) and repository on
   the vault. Finding numbers come from a per-project counter and are never reused.
-- `src/settings/`: Settings panels. `src/ui/router.ts`: tiny hash router (`#/settings`).
+- `src/findings/FindingsPage.tsx`, `FindingEditor.tsx`: project picker, list, editor (autosave via
+  `useAutosave`). Shared form fields live in `src/ui/fields.tsx`.
+- `src/settings/`: Settings panels. `src/ui/router.ts`: hash router (`matchRoute`: `#/findings`,
+  `#/findings/<id>`, `#/cvss`, `#/settings`).
 - Pure logic lives in plain `.ts` modules with colocated `*.test.ts` files; UI in `.tsx`.
