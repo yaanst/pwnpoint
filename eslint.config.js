@@ -14,6 +14,23 @@ export default tseslint.config(
       'no-eval': 'error',
       'no-implied-eval': 'error',
       'no-new-func': 'error',
+      // Local-only rule: never turn user text into markup.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
+          message: 'Render user text as text nodes (see src/text/MarkdownLite.tsx).',
+        },
+        {
+          selector:
+            'AssignmentExpression > MemberExpression.left[property.name=/^(innerHTML|outerHTML)$/]',
+          message: 'Do not assign HTML strings; build DOM nodes or use Preact.',
+        },
+        {
+          selector: 'CallExpression[callee.property.name=/^(insertAdjacentHTML|write|writeln)$/]',
+          message: 'Do not inject HTML strings.',
+        },
+      ],
     },
   },
   {

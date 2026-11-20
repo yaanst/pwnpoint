@@ -78,5 +78,7 @@ when behaviour changes.
 - `src/storage/vault.ts`: the only way to read/write user data (setup / locked / ready, seals records).
 - `src/storage/VaultGate.tsx`: first-run setup, unlock screen; renders the app only when ready.
   e2e tests start with `openWithNewVault(page)` from the fixtures.
+- `src/text/markdownLite.ts`: the only free-text formatting (bold, code, bullets) → a tree, never
+  HTML. Render it with `<MarkdownLite>`. ESLint bans `dangerouslySetInnerHTML`, `innerHTML` & co.
 - `src/settings/`: Settings panels. `src/ui/router.ts`: tiny hash router (`#/settings`).
 - Pure logic lives in plain `.ts` modules with colocated `*.test.ts` files; UI in `.tsx`.
