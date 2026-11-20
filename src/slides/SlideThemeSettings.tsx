@@ -324,11 +324,15 @@ export function SlideThemeSettings({ vault }: { vault: Vault }) {
               }
             }}
           />
-          <ul class="errors" role="alert">
-            {errors.map((err) => (
-              <li key={err}>{err}</li>
-            ))}
-          </ul>
+          <div role="alert">
+            {errors.length > 0 && (
+              <ul class="errors">
+                {errors.map((err) => (
+                  <li key={err}>{err}</li>
+                ))}
+              </ul>
+            )}
+          </div>
           <p role="status" class="muted">
             {message}
           </p>

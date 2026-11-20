@@ -101,6 +101,13 @@ for (const scheme of ['light', 'dark'] as const) {
     await audit(page, 'scenarios (empty)');
     await page.getByRole('button', { name: /New scenario/ }).click();
     await page.getByLabel('Title', { exact: true }).fill('Domain takeover');
+    for (const [n, name] of [
+      [1, 'Phishing'],
+      [2, 'Domain admin'],
+    ] as const) {
+      await page.getByRole('button', { name: '+ Add technique' }).click();
+      await page.getByLabel(`Technique (step ${n})`).fill(name);
+    }
     await audit(page, 'scenario editor');
 
     await page.getByRole('link', { name: 'CVSS calculator' }).click();

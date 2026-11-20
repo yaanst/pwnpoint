@@ -1,3 +1,4 @@
+import { canBypass, isLinear, successors } from './graph';
 import type { Severity } from '../cvss/cvss31';
 import { effectiveSeverity, type Finding, findingRef } from '../findings/model';
 
@@ -21,6 +22,11 @@ export interface ScenarioStep {
   note: string;
   /** Fixing this step breaks the whole chain. */
   chainBreaker: boolean;
+  /**
+   * Branching scenarios (scenarioBranches flag): ids of the later steps this one leads to. Absent
+   * means the next step in the list. Empty means it leads straight to the goal.
+   */
+  next?: string[];
 }
 
 export interface Scenario {
@@ -109,12 +115,19 @@ export function stepView(step: ScenarioStep, findings: Map<string, Finding>): St
 /** Problems shown in the editor; none of them blocks saving. */
 export function scenarioProblems(s: Scenario, findings: Map<string, Finding>): string[] {
   const problems: string[] = [];
+  const succ = successors(s.steps);
+  const branching = !isLinear(succ);
   s.steps.forEach((step, i) => {
     const v = stepView(step, findings);
     if (v.missing)
       problems.push(`Step ${i + 1} points to a deleted finding. Replace or remove it.`);
     if (step.kind === 'technique' && !v.title)
       problems.push(`Step ${i + 1} has no technique name.`);
+    if (step.chainBreaker && branching && canBypass(succ, i)) {
+      problems.push(
+        `Step ${i + 1} is marked as a chain breaker, but another path reaches the goal without it.`,
+      );
+    }
     if (!validMitreId(step.mitreId)) {
       problems.push(`Step ${i + 1}: “${step.mitreId}” is not a MITRE ATT&CK id (e.g. T1110.003).`);
     }

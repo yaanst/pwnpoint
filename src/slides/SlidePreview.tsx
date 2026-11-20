@@ -48,11 +48,13 @@ export function SlidePreview({ vault, finding }: { vault: Vault; finding: Findin
             />
           </div>
           {slide.warnings.length > 0 ? (
-            <ul class="errors slide-warnings" role="status" data-testid="slide-warnings">
-              {slide.warnings.map((w) => (
-                <li key={w}>⚠️ {w}</li>
-              ))}
-            </ul>
+            <div role="status" data-testid="slide-warnings">
+              <ul class="errors slide-warnings">
+                {slide.warnings.map((w) => (
+                  <li key={w}>⚠️ {w}</li>
+                ))}
+              </ul>
+            </div>
           ) : (
             <p class="muted small-text" role="status" data-testid="slide-warnings">
               Everything fits on the slide.

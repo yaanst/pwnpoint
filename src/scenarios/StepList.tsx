@@ -1,6 +1,8 @@
 import { useState } from 'preact/hooks';
 import type { Finding } from '../findings/model';
 import { findingHref } from '../ui/router';
+import { isEnabled } from '../flags';
+import { cleanLinks, successors } from './graph';
 import { moveStep, type ScenarioStep, stepView, validMitreId } from './model';
 
 /**
@@ -21,11 +23,20 @@ export function StepList({
 
   const move = (from: number, to: number) => {
     if (to < 0 || to >= steps.length || from === to) return;
-    onChange(moveStep(steps, from, to));
+    onChange(cleanLinks(moveStep(steps, from, to)));
     setAnnounce(`Step ${from + 1} moved to position ${to + 1} of ${steps.length}.`);
   };
   const patch = (i: number, p: Partial<ScenarioStep>) =>
     onChange(steps.map((s, j) => (j === i ? { ...s, ...p } : s)));
+  const branches = isEnabled('scenarioBranches');
+  const succ = successors(steps, branches);
+  const label = (j: number) => {
+    const st = steps[j];
+    const v = st && stepView(st, findings);
+    const name =
+      !st || !v || v.missing ? 'missing finding' : [v.tag, v.title].filter(Boolean).join(' ');
+    return `Step ${j + 1}${name ? `: ${name}` : ''}`;
+  };
 
   return (
     <>
@@ -114,7 +125,7 @@ export function StepList({
                     class="small"
                     aria-label={`Remove step ${n}`}
                     onClick={() => {
-                      onChange(steps.filter((_, j) => j !== i));
+                      onChange(cleanLinks(steps.filter((_, j) => j !== i)));
                       setAnnounce(`Step ${n} removed.`);
                     }}
                   >
@@ -174,6 +185,14 @@ export function StepList({
                   {step.kind === 'finding' ? ' (empty: the finding’s recommendation)' : ''}.
                 </p>
               </div>
+              {branches && (
+                <LeadsTo
+                  n={n}
+                  later={steps.slice(i + 1).map((s, k) => ({ id: s.id, label: label(i + 1 + k) }))}
+                  selected={(succ[i] ?? []).map((j) => steps[j]?.id ?? '')}
+                  onChange={(next) => patch(i, { next })}
+                />
+              )}
               <label class="checkbox">
                 <input
                   type="checkbox"
@@ -190,5 +209,40 @@ export function StepList({
         {announce}
       </p>
     </>
+  );
+}
+
+/**
+ * Branching scenarios: the later steps this one leads to. Only later steps can be chosen, so the
+ * graph never loops. Nothing checked: the step reaches the goal.
+ */
+function LeadsTo(p: {
+  n: number;
+  later: { id: string; label: string }[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+}) {
+  if (!p.later.length) return <p class="muted">Step {p.n} leads to the goal.</p>;
+  const toggle = (id: string, on: boolean) => {
+    const set = new Set(p.selected);
+    if (on) set.add(id);
+    else set.delete(id);
+    p.onChange(p.later.map((l) => l.id).filter((l) => set.has(l)));
+  };
+  return (
+    <fieldset class="choices leads-to">
+      <legend>Step {p.n} leads to</legend>
+      {p.later.map((l) => (
+        <label key={l.id} class="checkbox">
+          <input
+            type="checkbox"
+            checked={p.selected.includes(l.id)}
+            onChange={(e) => toggle(l.id, e.currentTarget.checked)}
+          />
+          {l.label}
+        </label>
+      ))}
+      {!p.selected.length && <p class="muted">Nothing checked: this step reaches the goal.</p>}
+    </fieldset>
   );
 }

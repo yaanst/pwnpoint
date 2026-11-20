@@ -36,10 +36,14 @@ export function PassphraseFields(p: Props) {
 
 export function Errors({ id, errors }: { id: string; errors: string[] }) {
   return (
-    <ul id={id} class="errors" role="alert">
-      {errors.map((e) => (
-        <li key={e}>{e}</li>
-      ))}
-    </ul>
+    <div id={id} role="alert">
+      {errors.length > 0 && (
+        <ul class="errors">
+          {errors.map((e) => (
+            <li key={e}>{e}</li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

@@ -181,11 +181,15 @@ export function EvidencePanel({ vault, finding }: { vault: Vault; finding: Findi
       <p role="status" class="muted" aria-busy={busy}>
         {busy ? 'Importing…' : message}
       </p>
-      <ul class="errors" role="alert">
-        {errors.map((e) => (
-          <li key={e}>{e}</li>
-        ))}
-      </ul>
+      <div role="alert">
+        {errors.length > 0 && (
+          <ul class="errors">
+            {errors.map((e) => (
+              <li key={e}>{e}</li>
+            ))}
+          </ul>
+        )}
+      </div>
       {warning && (
         <p class="warning" role="alert">
           {warning}

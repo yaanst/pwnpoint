@@ -216,6 +216,9 @@ function step(c: Checker, v: unknown, where: string): ScenarioStep {
   if (kind === 'finding') s.findingId = c.id(o.findingId, `${where} finding`);
   else s.technique = c.str(o.technique, `${where} technique`);
   if (o.mitreId !== undefined) s.mitreId = c.str(o.mitreId, `${where} MITRE id`, 20);
+  if (o.next !== undefined) {
+    s.next = c.list(o.next, `${where} links`, LIMITS.steps).map((id) => c.id(id, `${where} link`));
+  }
   return s;
 }
 

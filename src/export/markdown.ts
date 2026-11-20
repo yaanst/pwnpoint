@@ -1,3 +1,4 @@
+import { isLinear, successors } from '../scenarios/graph';
 import { effectiveSeverity, type Finding, findingRef, findingCvss } from '../findings/model';
 import { type Scenario, scenarioRef, stepView } from '../scenarios/model';
 import { LABELS, type SlideLanguage } from '../slides/theme';
@@ -107,10 +108,17 @@ export function scenarioMarkdown(
   if (s.context.trim()) lines.push('', `${sub} ${S.context}`, '', s.context.trim());
   if (s.steps.length) {
     lines.push('', `${sub} ${S.path}`, '');
+    const succ = successors(s.steps);
+    const branching = !isLinear(succ);
     s.steps.forEach((st, i) => {
       const gains = one(st.gains) ? ` → ${S.gains}: ${one(st.gains)}` : '';
       const breaker = st.chainBreaker ? ` · *${S.chainBreaker}*` : '';
-      lines.push(`${i + 1}. ${name(i)}${gains}${breaker}`);
+      // Branching scenarios say where each step leads (step numbers, or the goal).
+      const next = succ[i] ?? [];
+      const leads = !branching
+        ? ''
+        : ` (${S.leadsTo}: ${next.length ? next.map((j) => j + 1).join(', ') : S.goal.toLowerCase()})`;
+      lines.push(`${i + 1}. ${name(i)}${gains}${breaker}${leads}`);
       if (st.note.trim()) lines.push(`   ${one(st.note)}`);
     });
   }

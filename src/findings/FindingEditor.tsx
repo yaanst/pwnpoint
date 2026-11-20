@@ -112,11 +112,15 @@ function FindingEditor({ vault, initial }: { vault: Vault; initial: Finding }) {
             <option value="draft">Draft</option>
             <option value="validated">Validated</option>
           </select>
-          <ul id="f-status-errors" class="errors" role="alert">
-            {statusProblems.map((p) => (
-              <li key={p}>{p}</li>
-            ))}
-          </ul>
+          <div id="f-status-errors" role="alert">
+            {statusProblems.length > 0 && (
+              <ul class="errors">
+                {statusProblems.map((p) => (
+                  <li key={p}>{p}</li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
 
         <LinesField

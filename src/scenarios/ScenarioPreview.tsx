@@ -126,11 +126,13 @@ export function ScenarioPreview({
           : `${layout.slides.length === 1 ? 'Fits on one slide' : `Split over 2 slides after step ${layout.splitAt ?? 0}`}, step text at ${layout.fontPt} pt.`}
       </p>
       {warnings.length > 0 ? (
-        <ul class="errors slide-warnings" role="status" data-testid="slide-warnings">
-          {warnings.map((w) => (
-            <li key={w}>⚠️ {w}</li>
-          ))}
-        </ul>
+        <div role="status" data-testid="slide-warnings">
+          <ul class="errors slide-warnings">
+            {warnings.map((w) => (
+              <li key={w}>⚠️ {w}</li>
+            ))}
+          </ul>
+        </div>
       ) : (
         <p class="muted small-text" role="status" data-testid="slide-warnings">
           Everything fits.
