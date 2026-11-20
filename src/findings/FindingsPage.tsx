@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
+import { OpenMissionButton } from '../backup/OpenMission';
+import { SaveMissionDialog } from '../backup/SaveMissionDialog';
 import { calculateBaseScore, type Severity } from '../cvss/cvss31';
 import { ProjectExport } from '../export/ProjectExport';
 import type { Vault } from '../storage/vault';
@@ -35,6 +37,7 @@ export function FindingsPage({ vault }: { vault: Vault }) {
   const [filter, setFilter] = useState<FindingFilter>({});
   const [toDelete, setToDelete] = useState<Finding | null>(null);
   const [message, setMessage] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const reload = async (id: string | null = projectId) => {
     await whenSaved(); // e.g. the editor's last autosave when coming back to the list
@@ -117,6 +120,17 @@ export function FindingsPage({ vault }: { vault: Vault }) {
             setProjectId(p.id);
           }}
         />
+        <OpenMissionButton
+          vault={vault}
+          label="Open mission file…"
+          onImported={(result, text) => {
+            void listProjects(vault).then((list) => {
+              setProjects(list);
+              setProjectId(result.projects[0]?.id ?? projectId);
+              setMessage(text);
+            });
+          }}
+        />
       </div>
 
       {!projectId ? (
@@ -128,6 +142,9 @@ export function FindingsPage({ vault }: { vault: Vault }) {
               + New finding
             </button>
             <Filters filter={filter} onChange={setFilter} />
+            <button type="button" onClick={() => setSaving(true)}>
+              Save mission file…
+            </button>
           </div>
           <p role="status" class="muted">
             {message}
@@ -160,6 +177,17 @@ export function FindingsPage({ vault }: { vault: Vault }) {
             </>
           )}
         </>
+      )}
+
+      {saving && project && (
+        <SaveMissionDialog
+          vault={vault}
+          project={project}
+          onClose={(text) => {
+            setSaving(false);
+            if (text) setMessage(text);
+          }}
+        />
       )}
 
       {toDelete && (

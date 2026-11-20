@@ -28,22 +28,23 @@ export async function saveTheme(vault: Vault, theme: SlideTheme): Promise<void> 
 
 export const THEME_FORMAT = 'pwnpoint-theme';
 
-export function exportTheme(theme: SlideTheme): string {
+/** The theme file's content as a plain object (also embedded in mission files). */
+export function themeFileObject(theme: SlideTheme) {
   const { logo, ...rest } = theme;
-  return JSON.stringify(
-    {
-      format: THEME_FORMAT,
-      version: 1,
-      theme: {
-        ...rest,
-        logo: logo
-          ? { pngBase64: bytesToBase64(logo.bytes), width: logo.width, height: logo.height }
-          : null,
-      },
+  return {
+    format: THEME_FORMAT,
+    version: 1,
+    theme: {
+      ...rest,
+      logo: logo
+        ? { pngBase64: bytesToBase64(logo.bytes), width: logo.width, height: logo.height }
+        : null,
     },
-    null,
-    2,
-  );
+  };
+}
+
+export function exportTheme(theme: SlideTheme): string {
+  return JSON.stringify(themeFileObject(theme), null, 2);
 }
 
 export type ImportResult = { ok: true; theme: SlideTheme } | { ok: false; errors: string[] };
@@ -62,6 +63,11 @@ export function importTheme(json: string): ImportResult {
   } catch {
     return { ok: false, errors: ['This file is not valid JSON.'] };
   }
+  return validateThemeFile(data);
+}
+
+/** Validates a parsed theme file object (see `importTheme`). */
+export function validateThemeFile(data: unknown): ImportResult {
   if (!isObj(data) || data.format !== THEME_FORMAT || data.version !== 1 || !isObj(data.theme)) {
     return { ok: false, errors: ['This is not a PwnPoint theme file (version 1).'] };
   }

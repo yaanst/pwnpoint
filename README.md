@@ -60,6 +60,22 @@ boundary onto a second slide with "continued" markers. A scenario never takes mo
 slides: beyond that, slide exports are blocked until it is shortened. Scenarios export to
 `.pptx` (native shapes and arrows), PNG and Markdown, and are added to the project deck.
 
+## Mission files and backups
+
+Browser storage is not a backup. Save your work to `.pwnp` files:
+
+- **Save mission file…** (Findings page) saves the current project: findings, screenshots and
+  scenarios. **Back up everything…** (Settings) saves every project and the slide theme.
+- Files are **encrypted by default** with a passphrase you choose (AES-GCM 256, key derived
+  with PBKDF2-SHA256, 600,000 iterations). Unticking the box saves a plain file, with a warning.
+- Chrome and Edge open the native save dialog; Firefox downloads the file.
+- **Open mission file…** (Findings) or **Restore from a file…** (Settings) imports a file. You
+  see what it contains first. If a project already exists, keep both (the file is imported as a
+  copy) or replace it with the file's version.
+- Import is strict: the file is a plain ZIP (`pwnpoint.json`, `data.json`, `images/*.png`, or
+  an encrypted `payload.bin`), every record is validated field by field, nothing in it is ever
+  run, and every screenshot is re-encoded through a canvas.
+
 ## Privacy model
 
 PwnPoint is built for confidential client data:

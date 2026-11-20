@@ -7,6 +7,7 @@ import { ScenarioEditorPage } from './scenarios/ScenarioEditor';
 import { ScenariosPage } from './scenarios/ScenariosPage';
 import { DEFAULT_CVSS } from './findings/model';
 import { guardUnloadWhileSaving } from './findings/pendingSaves';
+import { BackupSettings } from './settings/BackupSettings';
 import { SecuritySettings } from './settings/SecuritySettings';
 import { SlideThemeSettings } from './slides/SlideThemeSettings';
 import type { Vault } from './storage/vault';
@@ -35,6 +36,7 @@ export function App() {
         return (
           <div class="stack-sections">
             <SlideThemeSettings vault={vault} />
+            <BackupSettings vault={vault} />
             <SecuritySettings vault={vault} />
           </div>
         );

@@ -173,3 +173,72 @@ export function sealJson(key: CryptoKey, value: unknown, context: string): Promi
 export async function openJson(key: CryptoKey, sealed: Sealed, context: string): Promise<unknown> {
   return JSON.parse(decoder.decode(await open(key, sealed, context))) as unknown;
 }
+
+/** Bytes encrypted with a key derived from a passphrase (for files that leave the browser). */
+export interface PassphraseSealed {
+  kdf: { name: 'PBKDF2'; hash: 'SHA-256'; iterations: number; salt: Uint8Array<ArrayBuffer> };
+  cipher: { name: 'AES-GCM'; iv: Uint8Array<ArrayBuffer> };
+  data: Uint8Array<ArrayBuffer>;
+}
+
+async function derivePassphraseKey(
+  passphrase: string,
+  salt: Uint8Array<ArrayBuffer>,
+  iterations: number,
+): Promise<CryptoKey> {
+  const material = await subtle().importKey('raw', encoder.encode(passphrase), 'PBKDF2', false, [
+    'deriveKey',
+  ]);
+  return subtle().deriveKey(
+    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations },
+    material,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt'],
+  );
+}
+
+/**
+ * Encrypts bytes with AES-GCM 256 under a key derived from `passphrase` (PBKDF2-SHA256, fresh
+ * 16-byte salt and 12-byte IV). `context` is bound as additional authenticated data.
+ */
+export async function encryptWithPassphrase(
+  plaintext: Uint8Array<ArrayBuffer>,
+  passphrase: string,
+  context: string,
+  iterations = PBKDF2_ITERATIONS,
+): Promise<PassphraseSealed> {
+  const salt = randomBytes(SALT_BYTES);
+  const iv = randomBytes(IV_BYTES);
+  const key = await derivePassphraseKey(passphrase, salt, iterations);
+  const data = await subtle().encrypt(
+    { name: 'AES-GCM', iv, additionalData: encoder.encode(context) },
+    key,
+    plaintext,
+  );
+  return {
+    kdf: { name: 'PBKDF2', hash: 'SHA-256', iterations, salt },
+    cipher: { name: 'AES-GCM', iv },
+    data: new Uint8Array(data),
+  };
+}
+
+/** Decrypts `encryptWithPassphrase` output. Throws WrongPassphraseError when it fails. */
+export async function decryptWithPassphrase(
+  sealed: PassphraseSealed,
+  passphrase: string,
+  context: string,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const key = await derivePassphraseKey(passphrase, sealed.kdf.salt, sealed.kdf.iterations);
+  try {
+    const data = await subtle().decrypt(
+      { name: 'AES-GCM', iv: sealed.cipher.iv, additionalData: encoder.encode(context) },
+      key,
+      sealed.data,
+    );
+    return new Uint8Array(data);
+  } catch {
+    // GCM cannot tell a wrong passphrase from a modified file: both fail authentication.
+    throw new WrongPassphraseError();
+  }
+}

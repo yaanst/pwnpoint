@@ -39,4 +39,24 @@ describe('zip', () => {
     archive[31] = 'z'.charCodeAt(0); // first data byte (header 30 + name 1)
     expect(() => unzipStored(archive)).toThrow(/CRC/);
   });
+
+  it('refuses unsafe or malformed archives (it reads untrusted mission files)', () => {
+    const one = (name: string) => zip([{ name, data: enc.encode('x') }]);
+    expect(() => unzipStored(one('../evil'))).toThrow(/Unsafe file name/);
+    expect(() => unzipStored(one('/abs'))).toThrow(/Unsafe file name/);
+    expect(() => unzipStored(one('a\\b'))).toThrow(/Unsafe file name/);
+    const twice = zip([
+      { name: 'a', data: enc.encode('1') },
+      { name: 'a', data: enc.encode('2') },
+    ]);
+    expect(() => unzipStored(twice)).toThrow(/Duplicate/);
+    const ok = one('a.txt');
+    expect(() => unzipStored(ok.subarray(10))).toThrow();
+    const compressed = new Uint8Array(ok);
+    compressed[8] = 8; // local header: deflate
+    expect(() => unzipStored(compressed)).toThrow(/Compressed/);
+    const many = zip([0, 1, 2].map((i) => ({ name: `f${i}`, data: enc.encode('x') })));
+    expect(() => unzipStored(many, { maxEntries: 2 })).toThrow(/too many/);
+    expect(() => unzipStored(enc.encode('PK'))).toThrow(/Not a ZIP/);
+  });
 });

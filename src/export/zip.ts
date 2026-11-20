@@ -75,25 +75,62 @@ export function zip(entries: ZipEntry[]): Uint8Array<ArrayBuffer> {
   return out;
 }
 
-/** Reads a stored-only archive written by `zip` (used by tests). */
-export function unzipStored(archive: Uint8Array): Map<string, Uint8Array> {
+export class ZipError extends Error {
+  override name = 'ZipError';
+}
+
+/**
+ * Reads a stored-only archive (as written by `zip`). Safe on untrusted input: every offset and
+ * length is bounds-checked, only method 0 (stored) is accepted, names must be unique, relative
+ * and free of `..`, and the CRC of every entry is verified. Throws ZipError otherwise.
+ */
+export function unzipStored(
+  archive: Uint8Array,
+  { maxEntries = 0xffff }: { maxEntries?: number } = {},
+): Map<string, Uint8Array> {
+  const fail = (why: string): never => {
+    throw new ZipError(why);
+  };
   const view = new DataView(archive.buffer, archive.byteOffset, archive.byteLength);
-  const end = archive.length - 22;
-  if (view.getUint32(end, true) !== 0x06054b50) throw new Error('Not a ZIP archive.');
-  const count = view.getUint16(end + 10, true);
-  let at = view.getUint32(end + 16, true);
+  const u16 = (at: number) =>
+    at + 2 <= archive.length ? view.getUint16(at, true) : fail('Truncated archive.');
+  const u32 = (at: number) =>
+    at + 4 <= archive.length ? view.getUint32(at, true) : fail('Truncated archive.');
+  const end = archive.length - 22; // no archive comment: `zip` never writes one
+  if (end < 0 || u32(end) !== 0x06054b50) fail('Not a ZIP archive.');
+  const count = u16(end + 10);
+  if (count > maxEntries) fail('The archive has too many files.');
+  const centralSize = u32(end + 12);
+  let at = u32(end + 16);
+  if (at + centralSize > end) fail('Bad central directory.');
   const files = new Map<string, Uint8Array>();
-  const decoder = new TextDecoder();
+  const decoder = new TextDecoder('utf-8', { fatal: true });
   for (let i = 0; i < count; i++) {
-    if (view.getUint32(at, true) !== 0x02014b50) throw new Error('Bad central directory.');
-    const size = view.getUint32(at + 24, true);
-    const nameLen = view.getUint16(at + 28, true);
-    const skip = nameLen + view.getUint16(at + 30, true) + view.getUint16(at + 32, true);
-    const offset = view.getUint32(at + 42, true);
-    const name = decoder.decode(archive.subarray(at + 46, at + 46 + nameLen));
-    const localName = view.getUint16(offset + 26, true) + view.getUint16(offset + 28, true);
-    const data = archive.subarray(offset + 30 + localName, offset + 30 + localName + size);
-    if (crc32(data) !== view.getUint32(at + 16, true)) throw new Error(`Bad CRC for ${name}.`);
+    if (u32(at) !== 0x02014b50) fail('Bad central directory.');
+    if (u16(at + 10) !== 0) fail('Compressed entries are not supported.');
+    const crc = u32(at + 16);
+    const size = u32(at + 20);
+    if (u32(at + 24) !== size) fail('Bad entry size.');
+    const nameLen = u16(at + 28);
+    const skip = nameLen + u16(at + 30) + u16(at + 32);
+    const offset = u32(at + 42);
+    if (at + 46 + skip > end) fail('Bad central directory.');
+    let name = '';
+    try {
+      name = decoder.decode(archive.subarray(at + 46, at + 46 + nameLen));
+    } catch {
+      fail('Bad file name in archive.');
+    }
+    if (!name || name.startsWith('/') || name.split('/').includes('..') || name.includes('\\')) {
+      fail('Unsafe file name in archive.');
+    }
+    if (files.has(name)) fail('Duplicate file name in archive.');
+    if (u32(offset) !== 0x04034b50) fail('Bad local file header.');
+    if (u16(offset + 8) !== 0) fail('Compressed entries are not supported.');
+    const start = offset + 30 + u16(offset + 26) + u16(offset + 28);
+    if (start + size > archive.length) fail('Truncated archive.');
+    const data = archive.subarray(start, start + size);
+    if (crc32(data) !== crc) fail(`Bad CRC for ${name}.`);
     files.set(name, data);
     at += 46 + skip;
   }
