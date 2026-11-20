@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { calculateBaseScore, type Severity } from '../cvss/cvss31';
 import { CvssCalculator } from '../cvss/CvssCalculator';
 import { EvidencePanel } from '../evidence/EvidencePanel';
+import { UsedInScenarios } from '../scenarios/UsedInScenarios';
 import { SlidePreview } from '../slides/SlidePreview';
 import type { Vault } from '../storage/vault';
 import { LinesField, RichTextField, StepsField } from '../ui/fields';
@@ -85,6 +86,7 @@ function FindingEditor({ vault, initial }: { vault: Vault; initial: Finding }) {
               {SAVE_TEXT[status]}
             </span>
           </p>
+          <UsedInScenarios vault={vault} projectId={f.projectId} findingId={f.id} />
         </header>
 
         <div class="field">

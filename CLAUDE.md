@@ -99,9 +99,14 @@ when behaviour changes.
   its namespace URLs are allowlisted identifiers), `zip.ts` (stored-only ZIP, deterministic),
   `canvas.ts` (PNG renderer, same lines as `SlideSvg`), `markdown.ts`, `collect.ts` (loads slides
   and image bytes from the vault, downloads, clipboard). No export library: keep it that way.
+- `src/scenarios/`: attack scenarios. `model.ts` (steps: finding or technique, `SCN.NN` refs,
+  `stepView` resolves findings, missing ones included), `layout.ts` (pure snake flow: font
+  reduction to `theme.minFontPt`, split at a step boundary, max 2 slides else `blocked`),
+  repository, `ScenarioEditor.tsx`, `StepList.tsx` (drag, buttons, Alt+arrows), `FindingPicker.tsx`
+  (combobox), `ScenarioPreview.tsx` (preview + exports). Routes `#/scenarios`, `#/scenarios/<id>`.
 - Local Firefox e2e: `PLAYWRIGHT_BROWSERS_PATH=<dir> npx playwright install firefox`, then run
   `npm run test:e2e -- --project=firefox` with the same variable.
 - `src/findings/pendingSaves.ts`: wrap every async save in `trackSave()`; readers call `whenSaved()`.
 - `src/settings/`: Settings panels. `src/ui/router.ts`: hash router (`matchRoute`: `#/findings`,
-  `#/findings/<id>`, `#/cvss`, `#/settings`).
+  `#/findings/<id>`, `#/scenarios`, `#/scenarios/<id>`, `#/cvss`, `#/settings`).
 - Pure logic lives in plain `.ts` modules with colocated `*.test.ts` files; UI in `.tsx`.

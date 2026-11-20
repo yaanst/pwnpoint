@@ -292,9 +292,12 @@ function rectShape(e: RectElement, id: number): string {
   const geom = r
     ? `<a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val ${Math.min(50000, Math.round((r / Math.min(e.w, e.h)) * 100000))}"/></a:avLst></a:prstGeom>`
     : '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>';
+  const outline = e.stroke
+    ? `<a:ln w="${Math.round((e.strokePt ?? 1) * 12700)}"><a:solidFill><a:srgbClr val="${color(e.stroke)}"/></a:solidFill>${e.dashed ? '<a:prstDash val="dash"/>' : ''}</a:ln>`
+    : '<a:ln><a:noFill/></a:ln>';
   return (
     `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="Shape ${id}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>` +
-    `<p:spPr>${xfrm(e)}${geom}<a:solidFill><a:srgbClr val="${color(e.fill)}"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr></p:sp>`
+    `<p:spPr>${xfrm(e)}${geom}<a:solidFill><a:srgbClr val="${color(e.fill)}"/></a:solidFill>${outline}</p:spPr></p:sp>`
   );
 }
 
@@ -309,7 +312,7 @@ function lineShape(e: LineElement, id: number): string {
   return (
     `<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="${id}" name="Line ${id}"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr>` +
     `<p:spPr>${xfrm(box, flips)}<a:prstGeom prst="line"><a:avLst/></a:prstGeom>` +
-    `<a:ln w="${Math.round(e.widthPt * 12700)}"><a:solidFill><a:srgbClr val="${color(e.color)}"/></a:solidFill></a:ln></p:spPr></p:cxnSp>`
+    `<a:ln w="${Math.round(e.widthPt * 12700)}"><a:solidFill><a:srgbClr val="${color(e.color)}"/></a:solidFill>${e.arrowEnd ? '<a:tailEnd type="triangle" w="med" len="med"/>' : ''}</a:ln></p:spPr></p:cxnSp>`
   );
 }
 

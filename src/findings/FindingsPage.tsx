@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { calculateBaseScore, type Severity } from '../cvss/cvss31';
 import { ProjectExport } from '../export/ProjectExport';
 import type { Vault } from '../storage/vault';
+import { rememberedProject, rememberProject } from '../ui/currentProject';
 import { findingHref } from '../ui/router';
 import { DeleteFindingDialog } from './DeleteFindingDialog';
 import { whenSaved } from './pendingSaves';
@@ -26,24 +27,6 @@ import {
   listProjects,
   renameProject,
 } from './repository';
-
-const CURRENT_PROJECT_KEY = 'pwnpoint.currentProject';
-
-/** UI preference only (an opaque id), so localStorage is fine here. */
-function rememberedProject(): string | null {
-  try {
-    return localStorage.getItem(CURRENT_PROJECT_KEY);
-  } catch {
-    return null;
-  }
-}
-function rememberProject(id: string): void {
-  try {
-    localStorage.setItem(CURRENT_PROJECT_KEY, id);
-  } catch {
-    // Storage blocked: the choice is simply not remembered.
-  }
-}
 
 export function FindingsPage({ vault }: { vault: Vault }) {
   const [projects, setProjects] = useState<Project[] | null>(null);

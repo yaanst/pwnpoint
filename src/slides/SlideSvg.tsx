@@ -1,4 +1,4 @@
-import { LINE_HEIGHT, ptToIn, type Slide, type TextElement } from './layout';
+import { arrowHead, LINE_HEIGHT, ptToIn, type Slide, type TextElement } from './layout';
 
 const PX = 96; // SVG user units per inch
 
@@ -42,20 +42,32 @@ export function SlideSvg({
                 height={e.h * PX}
                 rx={(e.radius ?? 0) * PX}
                 fill={e.fill}
+                stroke={e.stroke}
+                stroke-width={e.stroke ? ((e.strokePt ?? 1) * PX) / 72 : undefined}
+                stroke-dasharray={e.dashed ? '6 4' : undefined}
               />
             );
-          case 'line':
+          case 'line': {
+            const head = e.arrowEnd ? arrowHead(e) : null;
             return (
-              <line
-                key={i}
-                x1={e.x1 * PX}
-                y1={e.y1 * PX}
-                x2={e.x2 * PX}
-                y2={e.y2 * PX}
-                stroke={e.color}
-                stroke-width={(e.widthPt * PX) / 72}
-              />
+              <g key={i}>
+                <line
+                  x1={e.x1 * PX}
+                  y1={e.y1 * PX}
+                  x2={(head?.baseX ?? e.x2) * PX}
+                  y2={(head?.baseY ?? e.y2) * PX}
+                  stroke={e.color}
+                  stroke-width={(e.widthPt * PX) / 72}
+                />
+                {head && (
+                  <polygon
+                    points={head.points.map(([x, y]) => `${x * PX},${y * PX}`).join(' ')}
+                    fill={e.color}
+                  />
+                )}
+              </g>
             );
+          }
           case 'image': {
             const url = images[e.source];
             return url ? (

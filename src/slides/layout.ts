@@ -11,6 +11,28 @@ const MARGIN = 0.5;
 export const LINE_HEIGHT = 1.25;
 export const ptToIn = (pt: number) => pt / 72;
 
+/** Arrowhead triangle (inches) at the end of a line, and where the shaft should stop. */
+export function arrowHead(e: LineElement) {
+  const len = Math.max(0.09, (e.widthPt / 72) * 4);
+  const dx = e.x2 - e.x1;
+  const dy = e.y2 - e.y1;
+  const d = Math.hypot(dx, dy) || 1;
+  const ux = dx / d;
+  const uy = dy / d;
+  const baseX = e.x2 - ux * len;
+  const baseY = e.y2 - uy * len;
+  const half = len * 0.55;
+  return {
+    baseX,
+    baseY,
+    points: [
+      [e.x2, e.y2],
+      [baseX - uy * half, baseY + ux * half],
+      [baseX + uy * half, baseY - ux * half],
+    ] as [number, number][],
+  };
+}
+
 export interface Paragraph {
   runs: TextRun[];
   bullet?: boolean;
@@ -49,6 +71,10 @@ export interface RectElement {
   h: number;
   fill: string;
   radius?: number;
+  /** Optional outline. */
+  stroke?: string;
+  strokePt?: number;
+  dashed?: boolean;
 }
 
 export interface ImageElement {
@@ -71,6 +97,8 @@ export interface LineElement {
   y2: number;
   color: string;
   widthPt: number;
+  /** Draws an arrowhead at (x2, y2). */
+  arrowEnd?: boolean;
 }
 
 export type SlideElement = TextElement | RectElement | ImageElement | LineElement;

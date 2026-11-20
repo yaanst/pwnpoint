@@ -28,7 +28,9 @@ export async function renameProject(
   project: Project,
   name: string,
 ): Promise<Project> {
-  const renamed = { ...project, name: name.trim() };
+  // Re-read: the caller's copy may hold stale counters (findings or scenarios created since).
+  const current = (await vault.get<Project>('projects', project.id)) ?? project;
+  const renamed = { ...current, name: name.trim() };
   await vault.put('projects', { id: project.id }, renamed);
   return renamed;
 }

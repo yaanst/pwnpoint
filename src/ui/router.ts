@@ -9,6 +9,8 @@ export function routeFromHash(hash: string): string {
 export type Page =
   | { name: 'findings' }
   | { name: 'finding'; id: string }
+  | { name: 'scenarios' }
+  | { name: 'scenario'; id: string }
   | { name: 'cvss' }
   | { name: 'settings' }
   | { name: 'not-found' };
@@ -19,9 +21,11 @@ export function matchRoute(route: string): Page {
   if (parts.length === 0 || (parts.length === 1 && parts[0] === 'findings')) {
     return { name: 'findings' };
   }
-  if (parts.length === 2 && parts[0] === 'findings' && parts[1]) {
+  if (parts.length === 1 && parts[0] === 'scenarios') return { name: 'scenarios' };
+  if (parts.length === 2 && (parts[0] === 'findings' || parts[0] === 'scenarios') && parts[1]) {
     try {
-      return { name: 'finding', id: decodeURIComponent(parts[1]) };
+      const id = decodeURIComponent(parts[1]);
+      return parts[0] === 'findings' ? { name: 'finding', id } : { name: 'scenario', id };
     } catch {
       return { name: 'not-found' };
     }
@@ -32,6 +36,7 @@ export function matchRoute(route: string): Page {
 }
 
 export const findingHref = (id: string) => `#/findings/${encodeURIComponent(id)}`;
+export const scenarioHref = (id: string) => `#/scenarios/${encodeURIComponent(id)}`;
 
 export function useHashRoute(): string {
   const [route, setRoute] = useState(() => routeFromHash(location.hash));

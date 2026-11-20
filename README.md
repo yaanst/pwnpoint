@@ -5,7 +5,7 @@ chain findings into full compromise scenarios shown as a flow on one slide.
 
 > **Status:** early development. Working today: projects and findings (editor, list, filters),
 > CVSS 3.1 scoring, evidence screenshots with redaction, a live slide preview with a custom
-> theme, and export to PowerPoint, PNG and Markdown. Scenarios and backups are coming next.
+> theme, export to PowerPoint, PNG and Markdown, and attack scenarios. Backups are coming next.
 
 ## Evidence screenshots
 
@@ -39,6 +39,26 @@ PowerPoint files are written by PwnPoint itself (no third-party library): every 
 box, badge and line is a native, editable shape, and images carry their caption as alternative
 text. The slide image shows the first two screenshots; Markdown lists every caption. Exports
 warn when text does not fit on a slide.
+
+## Attack scenarios
+
+**Scenarios** chain findings into the path an attacker follows, shown as a flow on one slide.
+A scenario (`SCN.01`, numbered per project) has a title, a starting position, a goal, a
+context, an impact and a likelihood, and ordered steps. A step is a finding (pick it by typing
+its reference or title) or a free technique with an optional MITRE ATT&CK id. Each step says
+what the attacker gains, can carry a note, and can be marked as a **chain breaker**: fixing it
+stops the attack. Chain breakers are listed under **Break the chain**, with the step's note or,
+if empty, the finding's recommendation.
+
+Reorder steps by dragging their handle, with the ↑/↓ buttons, or with Alt+↑/↓. A finding's
+editor shows the scenarios that use it; if a finding is deleted, its steps stay as a visible
+"missing finding" placeholder.
+
+The flow is laid out as a snake (left to right, then right to left). When it does not fit, the
+step text is reduced down to the theme's minimum font size, then the flow is split at a step
+boundary onto a second slide with "continued" markers. A scenario never takes more than two
+slides: beyond that, slide exports are blocked until it is shortened. Scenarios export to
+`.pptx` (native shapes and arrows), PNG and Markdown, and are added to the project deck.
 
 ## Privacy model
 

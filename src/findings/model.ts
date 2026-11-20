@@ -9,6 +9,8 @@ export interface Project {
   name: string;
   /** Next finding number to hand out. Numbers are never reused, even after a delete. */
   nextFindingNumber: number;
+  /** Next scenario number (SCN.NN). Missing on projects created before scenarios: starts at 1. */
+  nextScenarioNumber?: number;
   createdAt: number;
 }
 
