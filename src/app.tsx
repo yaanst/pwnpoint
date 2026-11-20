@@ -6,6 +6,7 @@ import { FindingsPage } from './findings/FindingsPage';
 import { DEFAULT_CVSS } from './findings/model';
 import { guardUnloadWhileSaving } from './findings/pendingSaves';
 import { SecuritySettings } from './settings/SecuritySettings';
+import { SlideThemeSettings } from './slides/SlideThemeSettings';
 import type { Vault } from './storage/vault';
 import { VaultGate } from './storage/VaultGate';
 import { matchRoute, type Page, useHashRoute } from './ui/router';
@@ -25,7 +26,12 @@ export function App() {
       case 'cvss':
         return <CvssCalculator value={metrics} onChange={setMetrics} />;
       case 'settings':
-        return <SecuritySettings vault={vault} />;
+        return (
+          <div class="stack-sections">
+            <SlideThemeSettings vault={vault} />
+            <SecuritySettings vault={vault} />
+          </div>
+        );
       default:
         return (
           <p role="alert">

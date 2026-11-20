@@ -773,3 +773,121 @@ button.small {
   padding-left: 1.25rem;
   font-size: 0.9rem;
 }
+
+/* Slide preview */
+.editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+@media (min-width: 1500px) {
+  body:has(.editor-layout) .shell {
+    max-width: 110rem;
+  }
+  .editor-layout {
+    grid-template-columns: minmax(0, 52rem) minmax(0, 1fr);
+  }
+  .editor-aside {
+    position: sticky;
+    top: 1rem;
+    align-self: start;
+  }
+}
+
+.slide-preview h3 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+
+.slide-frame {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 12%);
+}
+
+.slide-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.slide-warnings {
+  margin-top: 0.5rem;
+  list-style: none;
+  padding-left: 0;
+}
+
+/* Theme settings */
+.stack-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 24rem) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .theme-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.theme-grid .stack input[type='text'],
+.theme-grid .stack input[type='number'],
+.theme-grid .stack select {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 0.35rem 0.6rem;
+}
+
+.colors {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  margin: 0.6rem 0 0;
+  width: 100%;
+}
+
+.colors legend,
+.field-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-top: 0.4rem;
+}
+
+.color-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.2rem 0.6rem 0.2rem 0;
+  font-weight: 400;
+}
+
+.color-field input[type='color'] {
+  width: 2.2rem;
+  height: 1.8rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: none;
+}
+
+.severity-row {
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.severity-head {
+  margin: 0 0 0.25rem;
+}

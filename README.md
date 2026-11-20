@@ -4,7 +4,8 @@ Turn a pentest finding (CVSS 3.1 score + screenshot evidence) into a client-read
 chain findings into full compromise scenarios shown as a flow on one slide.
 
 > **Status:** early development. Working today: projects and findings (editor, list, filters),
-> CVSS 3.1 scoring, and evidence screenshots. Slides, scenarios and backups are coming next.
+> CVSS 3.1 scoring, evidence screenshots with redaction, and a live slide preview with a custom
+> theme. Slide export, scenarios and backups are coming next.
 
 ## Evidence screenshots
 
@@ -17,6 +18,14 @@ To hide secrets, open **Redact / crop** on a screenshot: draw black boxes or pix
 (with the mouse or by entering coordinates) and crop. **Apply** shows the flattened result; the
 original is only replaced when you confirm, and the hidden pixels are gone for good. Prefer black
 boxes for passwords, tokens and keys: pixelated text can sometimes be reconstructed.
+
+## Slides
+
+Each finding shows a live 16:9 slide preview next to the editor (on wide screens). Text is
+never shrunk to fit: when a section overflows, the preview marks it and says by how many lines.
+**Settings → Slide theme** sets the language of the slide labels (English or French), system
+fonts, colours (with a contrast check), severity badge colours, the footer, the smallest font
+size and an optional logo. Themes can be exported and imported as JSON files.
 
 ## Privacy model
 
