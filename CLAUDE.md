@@ -73,4 +73,7 @@ when behaviour changes.
 - `src/cvss/`: pure CVSS 3.1 module (`cvss31.ts`), FIRST definitions and the calculator UI.
 - `src/ui/`: shared UI helpers (e.g. radio-group keyboard model).
 - `src/storage/crypto.ts`: encryption at rest (PBKDF2 → wrapped AES-GCM data key, per-record AAD).
+- `src/storage/schema.ts`: IndexedDB schema. `MIGRATIONS[n]` upgrades version n → n+1; never edit a
+  released migration, append one.
+- `src/storage/vault.ts`: the only way to read/write user data (setup / locked / ready, seals records).
 - Pure logic lives in plain `.ts` modules with colocated `*.test.ts` files; UI in `.tsx`.
