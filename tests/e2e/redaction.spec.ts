@@ -58,7 +58,7 @@ async function dragOnImage(page: Page, from: [number, number], to: [number, numb
 
 /** Opens the editor; it is loaded once `corner` (never edited by any test) shows the background. */
 async function openEditor(page: Page, corner: [number, number] = [395, 295]) {
-  await page.getByRole('button', { name: 'Redact or crop evidence 1' }).click();
+  await page.getByRole('button', { name: 'Redact / crop evidence 1' }).click();
   await expect(canvas(page)).toBeVisible();
   await expect.poll(() => pixel(page, ...corner)).toEqual([0, 0, 255]);
 }

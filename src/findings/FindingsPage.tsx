@@ -5,6 +5,8 @@ import { calculateBaseScore, type Severity } from '../cvss/cvss31';
 import { ProjectExport } from '../export/ProjectExport';
 import type { Vault } from '../storage/vault';
 import { rememberedProject, rememberProject } from '../ui/currentProject';
+import { EmptyState } from '../ui/EmptyState';
+import { OnboardingTip } from '../ui/OnboardingTip';
 import { findingHref } from '../ui/router';
 import { DeleteFindingDialog } from './DeleteFindingDialog';
 import { whenSaved } from './pendingSaves';
@@ -81,123 +83,136 @@ export function FindingsPage({ vault }: { vault: Vault }) {
   };
 
   return (
-    <section class="panel" aria-labelledby="findings-title">
-      <h2 id="findings-title">Findings</h2>
-      <div class="row">
-        {projects.length > 0 && (
-          <>
-            <label for="project-select">Project</label>
-            <select
-              id="project-select"
-              value={projectId ?? ''}
-              onChange={(e) => {
-                setProjectId(e.currentTarget.value);
-                setMessage('');
-              }}
-            >
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-            {project && (
-              <RenameProject
-                key={project.id}
-                project={project}
-                onRename={async (name) => {
-                  const renamed = await renameProject(vault, project, name);
-                  setProjects(projects.map((p) => (p.id === renamed.id ? renamed : p)));
+    <>
+      <OnboardingTip />
+      <section class="panel" aria-labelledby="findings-title">
+        <h2 id="findings-title">Findings</h2>
+        <div class="row">
+          {projects.length > 0 && (
+            <>
+              <label for="project-select">Project</label>
+              <select
+                id="project-select"
+                value={projectId ?? ''}
+                onChange={(e) => {
+                  setProjectId(e.currentTarget.value);
+                  setMessage('');
                 }}
-              />
+              >
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              {project && (
+                <RenameProject
+                  key={project.id}
+                  project={project}
+                  onRename={async (name) => {
+                    const renamed = await renameProject(vault, project, name);
+                    setProjects(projects.map((p) => (p.id === renamed.id ? renamed : p)));
+                  }}
+                />
+              )}
+            </>
+          )}
+          <NewProject
+            onCreate={async (name) => {
+              const p = await createProject(vault, name);
+              setProjects([...projects, p]);
+              setProjectId(p.id);
+            }}
+          />
+          <OpenMissionButton
+            vault={vault}
+            label="Open mission file…"
+            onImported={(result, text) => {
+              void listProjects(vault).then((list) => {
+                setProjects(list);
+                setProjectId(result.projects[0]?.id ?? projectId);
+                setMessage(text);
+              });
+            }}
+          />
+        </div>
+
+        {!projectId ? (
+          <EmptyState title="Start with a project">
+            <p>
+              Create a project (one per mission) to start adding findings, or open a mission file
+              saved earlier.
+            </p>
+          </EmptyState>
+        ) : (
+          <>
+            <div class="row toolbar">
+              <button type="button" class="primary" onClick={() => void addFinding()}>
+                + New finding
+              </button>
+              <Filters filter={filter} onChange={setFilter} />
+              <button type="button" onClick={() => setSaving(true)}>
+                Save mission file…
+              </button>
+            </div>
+            <p role="status" class="muted">
+              {message}
+            </p>
+
+            {findings.length === 0 ? (
+              <EmptyState title="No findings in this project yet">
+                <p>
+                  Add the first one with <strong>+ New finding</strong>. In a finding, paste
+                  screenshots with Ctrl/Cmd+V: their metadata is removed and you can redact them.
+                </p>
+              </EmptyState>
+            ) : (
+              <>
+                <p class="muted" data-testid="findings-count">
+                  {filtered
+                    ? `Showing ${shown.length} of ${findings.length} findings`
+                    : `${findings.length} finding${findings.length > 1 ? 's' : ''}`}
+                </p>
+                {shown.length === 0 ? (
+                  <p>
+                    No finding matches these filters.{' '}
+                    <button type="button" class="link" onClick={() => setFilter({})}>
+                      Clear filters
+                    </button>
+                  </p>
+                ) : (
+                  <FindingTable
+                    findings={shown}
+                    onDuplicate={(f) => void duplicate(f)}
+                    onDelete={setToDelete}
+                  />
+                )}
+                {project && <ProjectExport vault={vault} project={project} findings={findings} />}
+              </>
             )}
           </>
         )}
-        <NewProject
-          onCreate={async (name) => {
-            const p = await createProject(vault, name);
-            setProjects([...projects, p]);
-            setProjectId(p.id);
-          }}
-        />
-        <OpenMissionButton
-          vault={vault}
-          label="Open mission file…"
-          onImported={(result, text) => {
-            void listProjects(vault).then((list) => {
-              setProjects(list);
-              setProjectId(result.projects[0]?.id ?? projectId);
-              setMessage(text);
-            });
-          }}
-        />
-      </div>
 
-      {!projectId ? (
-        <p class="muted">Create a project (one per mission) to start adding findings.</p>
-      ) : (
-        <>
-          <div class="row toolbar">
-            <button type="button" class="primary" onClick={() => void addFinding()}>
-              + New finding
-            </button>
-            <Filters filter={filter} onChange={setFilter} />
-            <button type="button" onClick={() => setSaving(true)}>
-              Save mission file…
-            </button>
-          </div>
-          <p role="status" class="muted">
-            {message}
-          </p>
+        {saving && project && (
+          <SaveMissionDialog
+            vault={vault}
+            project={project}
+            onClose={(text) => {
+              setSaving(false);
+              if (text) setMessage(text);
+            }}
+          />
+        )}
 
-          {findings.length === 0 ? (
-            <p class="muted">No findings in this project yet.</p>
-          ) : (
-            <>
-              <p class="muted" data-testid="findings-count">
-                {filtered
-                  ? `Showing ${shown.length} of ${findings.length} findings`
-                  : `${findings.length} finding${findings.length > 1 ? 's' : ''}`}
-              </p>
-              {shown.length === 0 ? (
-                <p>
-                  No finding matches these filters.{' '}
-                  <button type="button" class="link" onClick={() => setFilter({})}>
-                    Clear filters
-                  </button>
-                </p>
-              ) : (
-                <FindingTable
-                  findings={shown}
-                  onDuplicate={(f) => void duplicate(f)}
-                  onDelete={setToDelete}
-                />
-              )}
-              {project && <ProjectExport vault={vault} project={project} findings={findings} />}
-            </>
-          )}
-        </>
-      )}
-
-      {saving && project && (
-        <SaveMissionDialog
-          vault={vault}
-          project={project}
-          onClose={(text) => {
-            setSaving(false);
-            if (text) setMessage(text);
-          }}
-        />
-      )}
-
-      {toDelete && (
-        <DeleteFindingDialog
-          finding={toDelete}
-          onCancel={() => setToDelete(null)}
-          onConfirm={() => void remove(toDelete)}
-        />
-      )}
-    </section>
+        {toDelete && (
+          <DeleteFindingDialog
+            finding={toDelete}
+            onCancel={() => setToDelete(null)}
+            onConfirm={() => void remove(toDelete)}
+          />
+        )}
+      </section>
+    </>
   );
 }
 

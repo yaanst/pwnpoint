@@ -1,3 +1,4 @@
+import { EmptyState } from '../ui/EmptyState';
 import { useEffect, useState } from 'preact/hooks';
 import type { Project } from '../findings/model';
 import { listProjects } from '../findings/repository';
@@ -50,9 +51,12 @@ export function ScenariosPage({ vault }: { vault: Vault }) {
         slide.
       </p>
       {projects.length === 0 || !projectId ? (
-        <p class="muted">
-          Create a project on the <a href="#/findings">Findings</a> page first.
-        </p>
+        <EmptyState title="No project yet">
+          <p>
+            Create a project on the <a href="#/findings">Findings</a> page first, then come back to
+            chain its findings.
+          </p>
+        </EmptyState>
       ) : (
         <>
           <div class="row toolbar">
@@ -73,7 +77,13 @@ export function ScenariosPage({ vault }: { vault: Vault }) {
             </button>
           </div>
           {scenarios.length === 0 ? (
-            <p class="muted">No scenarios in this project yet.</p>
+            <EmptyState title="No scenarios in this project yet">
+              <p>
+                Start one with <strong>+ New scenario</strong>, then add its steps: findings of this
+                project or free techniques (with an optional MITRE ATT&amp;CK id). Mark the steps
+                whose fix breaks the chain.
+              </p>
+            </EmptyState>
           ) : (
             <table class="findings-table">
               <thead>

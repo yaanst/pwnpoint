@@ -92,6 +92,13 @@ PwnPoint is built for confidential client data:
 
 Supported browsers: Chrome, Edge and Firefox (desktop).
 
+## Accessibility and appearance
+
+PwnPoint works with the keyboard alone and with screen readers, and every page is checked in CI
+against the WCAG 2.1 A and AA rules of axe-core, in light and dark mode. The app follows the
+system's light or dark mode; Settings → Appearance can force one. Slides always keep the slide
+theme's colours.
+
 ## Running it
 
 1. Download `pwnpoint-vX.Y.Z.html` from the [latest release](https://github.com/yaanst/pwnpoint/releases/latest),
