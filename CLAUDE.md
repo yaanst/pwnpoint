@@ -104,6 +104,11 @@ when behaviour changes.
   reduction to `theme.minFontPt`, split at a step boundary, max 2 slides else `blocked`),
   repository, `ScenarioEditor.tsx`, `StepList.tsx` (drag, buttons, Alt+arrows), `FindingPicker.tsx`
   (combobox), `ScenarioPreview.tsx` (preview + exports). Routes `#/scenarios`, `#/scenarios/<id>`.
+- `src/backup/`: mission files (`.pwnp`). `mission.ts` (stored ZIP; plain or AES-GCM payload under a
+  PBKDF2 key, `encryptWithPassphrase` in `crypto.ts`), `validate.ts` (strict field-by-field rebuild,
+  limits, cross-references; never trust the file), `repository.ts` (collect, restore with replace /
+  copy, re-encode every image before writing), `files.ts` (native save dialog or download),
+  `SaveMissionDialog.tsx`, `OpenMission.tsx`. `unzipStored` is hardened for untrusted input.
 - Local Firefox e2e: `PLAYWRIGHT_BROWSERS_PATH=<dir> npx playwright install firefox`, then run
   `npm run test:e2e -- --project=firefox` with the same variable.
 - `src/findings/pendingSaves.ts`: wrap every async save in `trackSave()`; readers call `whenSaved()`.

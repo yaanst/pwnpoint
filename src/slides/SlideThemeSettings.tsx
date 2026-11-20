@@ -303,8 +303,23 @@ export function SlideThemeSettings({ vault }: { vault: Vault }) {
               if (!result) setErrors(['This file is too large to be a theme.']);
               else if (!result.ok) setErrors(result.errors);
               else {
+                let imported = result.theme;
+                if (imported.logo) {
+                  // Re-encode the logo through a canvas, like every imported image.
+                  try {
+                    const blob = new Blob([imported.logo.bytes], { type: 'image/png' });
+                    const img = await processLogo(blob);
+                    imported = {
+                      ...imported,
+                      logo: { bytes: img.bytes, width: img.width, height: img.height },
+                    };
+                  } catch {
+                    setErrors(['The logo in this theme file could not be read.']);
+                    return;
+                  }
+                }
                 setErrors([]);
-                update(result.theme, true);
+                update(imported, true);
                 setMessage('Theme imported.');
               }
             }}

@@ -95,7 +95,7 @@ test('deletes from the editor without the pending autosave bringing it back', as
 test('renames the project', async ({ page }) => {
   await page.getByRole('button', { name: 'Rename' }).click();
   await page.getByLabel('Project name').fill('ACME external 2026');
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByLabel('Project', { exact: true }).locator('option:checked')).toHaveText(
     'ACME external 2026',
   );

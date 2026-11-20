@@ -435,6 +435,7 @@ button:disabled {
 }
 
 .dialog-actions {
+  align-self: stretch;
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
