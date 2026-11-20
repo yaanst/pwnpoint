@@ -9,7 +9,10 @@ test('creates a project and a finding, edits every field, and keeps it after a r
   await expect(page.getByText('Create a project')).toBeVisible();
   await page.getByLabel('New project').fill('ACME internal 2026');
   await page.getByRole('button', { name: 'Create' }).click();
-  await expect(page.getByLabel('Project')).toHaveValue(/.+/);
+  await expect(page.getByLabel('Project', { exact: true }).locator('option:checked')).toHaveText(
+    'ACME internal 2026',
+  );
+  await expect(page.getByLabel('New project')).toHaveValue('');
 
   await page.getByRole('button', { name: '+ New finding' }).click();
   await expect(page.getByRole('heading', { name: /VLN\.01 Untitled finding/ })).toBeVisible();
