@@ -51,6 +51,15 @@ export interface SlideLabels {
   severity: Record<Severity, string>;
   cvss: string;
   untitled: string;
+  figure: string;
+  logo: string;
+  steps: string;
+  references: string;
+  evidence: string;
+  severityLabel: string;
+  overrideReason: string;
+  coverSubtitle: string;
+  findingCount: (n: number) => string;
 }
 
 export const LABELS: Record<SlideLanguage, SlideLabels> = {
@@ -62,6 +71,15 @@ export const LABELS: Record<SlideLanguage, SlideLabels> = {
     severity: { Critical: 'Critical', High: 'High', Medium: 'Medium', Low: 'Low', None: 'None' },
     cvss: 'CVSS 3.1',
     untitled: 'Untitled finding',
+    figure: 'Figure',
+    logo: 'Logo',
+    steps: 'Steps to reproduce',
+    references: 'References',
+    evidence: 'Evidence',
+    severityLabel: 'Severity',
+    overrideReason: 'Severity adjusted',
+    coverSubtitle: 'Security assessment: findings',
+    findingCount: (n) => `${n} finding${n === 1 ? '' : 's'}`,
   },
   fr: {
     description: 'Description',
@@ -77,6 +95,15 @@ export const LABELS: Record<SlideLanguage, SlideLabels> = {
     },
     cvss: 'CVSS 3.1',
     untitled: 'Vulnérabilité sans titre',
+    figure: 'Figure',
+    logo: 'Logo',
+    steps: 'Étapes de reproduction',
+    references: 'Références',
+    evidence: 'Preuves',
+    severityLabel: 'Sévérité',
+    overrideReason: 'Sévérité ajustée',
+    coverSubtitle: 'Audit de sécurité : vulnérabilités',
+    findingCount: (n) => `${n} vulnérabilité${n > 1 ? 's' : ''}`,
   },
 };
 

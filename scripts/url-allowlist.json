@@ -1,11 +1,65 @@
 {
   "$comment": "Exact URLs allowed to appear as text in dist/. Each entry needs a reason. They are never fetched: the CSP sets connect-src 'none'.",
   "allow": [
-    { "url": "http://www.w3.org/2000/svg", "reason": "SVG XML namespace identifier (Preact)" },
+    {
+      "url": "http://www.w3.org/2000/svg",
+      "reason": "SVG XML namespace identifier (Preact)"
+    },
     {
       "url": "http://www.w3.org/1998/Math/MathML",
       "reason": "MathML XML namespace identifier (Preact)"
     },
-    { "url": "http://www.w3.org/1999/xhtml", "reason": "XHTML XML namespace identifier (Preact)" }
+    {
+      "url": "http://www.w3.org/1999/xhtml",
+      "reason": "XHTML XML namespace identifier (Preact)"
+    },
+    {
+      "url": "http://schemas.openxmlformats.org/drawingml/2006/main",
+      "reason": "DrawingML namespace (PPTX export)"
+    },
+    {
+      "url": "http://schemas.openxmlformats.org/presentationml/2006/main",
+      "reason": "PresentationML namespace (PPTX export)"
+    },
+    {
+      "url": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+      "reason": "Relationships namespace (PPTX export)"
+    },
+    {
+      "url": "http://schemas.openxmlformats.org/officeDocument/2006/relationships/",
+      "reason": "Relationship type prefix (PPTX export)"
+    },
+    {
+      "url": "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties",
+      "reason": "Extended properties namespace (PPTX export)"
+    },
+    {
+      "url": "http://schemas.openxmlformats.org/package/2006/content-types",
+      "reason": "OPC content types namespace (PPTX export)"
+    },
+    {
+      "url": "http://schemas.openxmlformats.org/package/2006/relationships",
+      "reason": "OPC relationships namespace (PPTX export)"
+    },
+    {
+      "url": "http://schemas.openxmlformats.org/package/2006/metadata/core-properties",
+      "reason": "OPC core properties namespace (PPTX export)"
+    },
+    {
+      "url": "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties",
+      "reason": "Core properties relationship type (PPTX export)"
+    },
+    {
+      "url": "http://purl.org/dc/elements/1.1/",
+      "reason": "Dublin Core namespace (PPTX core properties)"
+    },
+    {
+      "url": "http://purl.org/dc/terms/",
+      "reason": "Dublin Core terms namespace (PPTX core properties)"
+    },
+    {
+      "url": "http://www.w3.org/2001/XMLSchema-instance",
+      "reason": "XML Schema instance namespace (PPTX core properties)"
+    }
   ]
 }

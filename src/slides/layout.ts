@@ -55,6 +55,8 @@ export interface ImageElement {
   kind: 'image';
   /** Evidence id, or 'logo'. */
   source: string;
+  /** Alternative text (PPTX description, accessibility). */
+  alt: string;
   x: number;
   y: number;
   w: number;
@@ -298,6 +300,11 @@ export function buildFindingSlide(
   const bodyTop = 1.95;
   const bodyBottom = SLIDE_H - 0.8;
   const images = evidence.slice(0, 2);
+  if (evidence.length > 2) {
+    warnings.push(
+      `Only the first 2 of ${evidence.length} images fit on the slide. Reorder them to choose.`,
+    );
+  }
   const textW = images.length ? 7.1 : right - MARGIN;
   const sections: [string, string][] = [
     [L.description, finding.description],
@@ -377,7 +384,13 @@ export function buildFindingSlide(
         h: slotH - captionH - gap,
       });
       const groupTop = top + (slotH - (fitted.h + gap + captionH)) / 2;
-      elements.push({ kind: 'image', source: img.id, ...fitted, y: groupTop });
+      elements.push({
+        kind: 'image',
+        source: img.id,
+        alt: caption || `${L.figure} ${i + 1}`,
+        ...fitted,
+        y: groupTop,
+      });
       if (caption) {
         const box = textBox(
           [{ runs: [{ text: caption }] }],
@@ -422,6 +435,7 @@ export function buildFindingSlide(
     elements.push({
       kind: 'image',
       source: 'logo',
+      alt: L.logo,
       ...fitImage(theme.logo.width, theme.logo.height, {
         x: right - 1.6,
         y: SLIDE_H - 0.62,
@@ -431,5 +445,111 @@ export function buildFindingSlide(
     });
   }
 
+  return { width: SLIDE_W, height: SLIDE_H, background: c.background, elements, warnings };
+}
+
+/** Deck cover: project name, subtitle, date and finding count. */
+export function buildCoverSlide(
+  projectName: string,
+  date: string,
+  findingCount: number,
+  theme: SlideTheme,
+  measure: Measure,
+): Slide {
+  const L = LABELS[theme.language];
+  const c = theme.colors;
+  const heading = { family: theme.headingFont, monoFamily: theme.monoFont };
+  const fonts = { family: theme.bodyFont, monoFamily: theme.monoFont };
+  const w = SLIDE_W - 2 * MARGIN;
+  const titlePt = Math.max(theme.minFontPt, 40);
+  const subPt = Math.max(theme.minFontPt, 20);
+  const smallPt = Math.max(theme.minFontPt, 14);
+  const warnings: string[] = [];
+  const elements: SlideElement[] = [
+    { kind: 'rect', x: 0, y: 0, w: 0.25, h: SLIDE_H, fill: c.accent },
+  ];
+  const title = textBox(
+    [{ runs: [{ text: projectName.trim() || L.untitled }] }],
+    {
+      role: 'cover-title',
+      x: MARGIN + 0.5,
+      y: 2.2,
+      w: w - 0.5,
+      h: ptToIn(titlePt) * LINE_HEIGHT * 2,
+      sizePt: titlePt,
+      color: c.text,
+      bold: true,
+      ...heading,
+    },
+    measure,
+  );
+  if (title.hiddenLines) warnings.push('The project name is too long for the cover. Shorten it.');
+  const titleBottom = 2.2 + Math.max(1, title.lines.length) * ptToIn(titlePt) * LINE_HEIGHT;
+  elements.push(title, {
+    kind: 'line',
+    x1: MARGIN + 0.5,
+    y1: titleBottom + 0.2,
+    x2: MARGIN + 3.5,
+    y2: titleBottom + 0.2,
+    color: c.accent,
+    widthPt: 3,
+  });
+  elements.push(
+    textBox(
+      [{ runs: [{ text: L.coverSubtitle }] }],
+      {
+        role: 'cover-subtitle',
+        x: MARGIN + 0.5,
+        y: titleBottom + 0.45,
+        w: w - 0.5,
+        h: ptToIn(subPt) * LINE_HEIGHT,
+        sizePt: subPt,
+        color: c.text,
+        ...heading,
+      },
+      measure,
+    ),
+    textBox(
+      [{ runs: [{ text: `${date} · ${L.findingCount(findingCount)}` }] }],
+      {
+        role: 'cover-meta',
+        x: MARGIN + 0.5,
+        y: titleBottom + 0.45 + ptToIn(subPt) * LINE_HEIGHT + 0.15,
+        w: w - 0.5,
+        h: ptToIn(smallPt) * LINE_HEIGHT,
+        sizePt: smallPt,
+        color: c.muted,
+        ...fonts,
+      },
+      measure,
+    ),
+    textBox(
+      [{ runs: [{ text: theme.footerText }] }],
+      {
+        role: 'footer',
+        x: MARGIN + 0.5,
+        y: SLIDE_H - 0.5,
+        w: 8,
+        h: 0.3,
+        sizePt: Math.max(theme.minFontPt, 10),
+        color: c.muted,
+        ...fonts,
+      },
+      measure,
+    ),
+  );
+  if (theme.logo) {
+    elements.push({
+      kind: 'image',
+      source: 'logo',
+      alt: L.logo,
+      ...fitImage(theme.logo.width, theme.logo.height, {
+        x: SLIDE_W - MARGIN - 2.5,
+        y: 0.5,
+        w: 2.5,
+        h: 0.9,
+      }),
+    });
+  }
   return { width: SLIDE_W, height: SLIDE_H, background: c.background, elements, warnings };
 }

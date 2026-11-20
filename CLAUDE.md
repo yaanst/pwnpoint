@@ -95,6 +95,10 @@ when behaviour changes.
   `Measure` → positioned elements, wrapped lines, overflow warnings; never shrinks text below
   `theme.minFontPt`), `wrap.ts`, `measure.ts` (canvas), `SlideSvg.tsx` (preview), `theme.ts`
   (EN/FR labels), `themeStore.ts` (vault storage + strict JSON import). Tests use `testing.ts`.
+- `src/export/`: outputs from the slide model. `pptx.ts` (in-house OOXML writer, native shapes;
+  its namespace URLs are allowlisted identifiers), `zip.ts` (stored-only ZIP, deterministic),
+  `canvas.ts` (PNG renderer, same lines as `SlideSvg`), `markdown.ts`, `collect.ts` (loads slides
+  and image bytes from the vault, downloads, clipboard). No export library: keep it that way.
 - Local Firefox e2e: `PLAYWRIGHT_BROWSERS_PATH=<dir> npx playwright install firefox`, then run
   `npm run test:e2e -- --project=firefox` with the same variable.
 - `src/findings/pendingSaves.ts`: wrap every async save in `trackSave()`; readers call `whenSaved()`.
