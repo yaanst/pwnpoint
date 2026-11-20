@@ -38,7 +38,10 @@ jobs:
         run: npm run build
       - name: Check dist for URLs
         run: npm run check:urls
+      # Browsers only: the runner image already has the system libraries they need.
+      # --with-deps adds ~40 apt packages (CJK fonts, codecs) that took up to 18 min to
+      # download from a slow Ubuntu mirror.
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium firefox
+        run: npx playwright install chromium firefox
       - name: End-to-end tests (file://, Chromium + Firefox, network guard)
         run: npm run test:e2e
