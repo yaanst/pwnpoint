@@ -53,3 +53,14 @@ export const test = base.extend<{ guard: Guard }>({
 });
 
 export { expect };
+
+export const TEST_PASSPHRASE = 'correct horse battery staple';
+
+/** Opens the app and completes first-run setup with an encryption passphrase. */
+export async function openWithNewVault(page: import('@playwright/test').Page): Promise<void> {
+  await page.goto(APP_URL);
+  await page.getByLabel('Passphrase', { exact: true }).fill(TEST_PASSPHRASE);
+  await page.getByLabel('Type it again').fill(TEST_PASSPHRASE);
+  await page.getByRole('button', { name: 'Encrypt and continue' }).click();
+  await expect(page.getByRole('heading', { name: 'CVSS 3.1 base score' })).toBeVisible();
+}
