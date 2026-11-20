@@ -732,7 +732,7 @@ button.small {
   height: auto;
 }
 
-.redact-canvas-wrap canvas.drawing {
+.redact-canvas-wrap:has(canvas.drawing) {
   cursor: crosshair;
   touch-action: none;
 }

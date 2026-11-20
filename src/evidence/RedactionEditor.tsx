@@ -159,7 +159,23 @@ export function RedactionEditor({ vault, evidence, onSaved, onClose }: Props) {
         </>
       )}
 
-      <div class="redact-canvas-wrap">
+      {/* Pointer handlers sit on the frame, not the canvas, so a drag can start on or just outside
+          the image edge (to cover it fully); the area is clamped to the image. */}
+      <div
+        class="redact-canvas-wrap"
+        onPointerDown={(e) => {
+          if (result || !source) return;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          const p = toImage(e);
+          setDrag({ from: p, to: p });
+        }}
+        onPointerMove={(e) => drag && setDrag({ ...drag, to: toImage(e) })}
+        onPointerUp={(e) => {
+          if (!drag || !source) return;
+          addRect(rectFromPoints(drag.from, toImage(e), source.width, source.height));
+          setDrag(null);
+        }}
+      >
         {source ? (
           <canvas
             ref={canvas}
@@ -169,18 +185,6 @@ export function RedactionEditor({ vault, evidence, onSaved, onClose }: Props) {
             aria-label={
               result ? 'Redacted result' : `Image ${source.width} × ${source.height} px with edits`
             }
-            onPointerDown={(e) => {
-              if (result) return;
-              e.currentTarget.setPointerCapture(e.pointerId);
-              const p = toImage(e);
-              setDrag({ from: p, to: p });
-            }}
-            onPointerMove={(e) => drag && setDrag({ ...drag, to: toImage(e) })}
-            onPointerUp={(e) => {
-              if (!drag || !source) return;
-              addRect(rectFromPoints(drag.from, toImage(e), source.width, source.height));
-              setDrag(null);
-            }}
           />
         ) : (
           <p aria-busy="true">Loading image…</p>
