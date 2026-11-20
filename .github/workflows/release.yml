@@ -1,10 +1,14 @@
 name: Release
 
-# Pushing a tag vX.Y.Z publishes a GitHub Release with the single-file app,
-# its SHA-256 checksum and a signed build provenance attestation.
+# Publishes a GitHub Release with the single-file app, its SHA-256 checksum and a
+# signed build provenance attestation. Two ways to start it:
+# - push a tag vX.Y.Z (it must match package.json), or
+# - run it manually on main ("Run workflow"): it reads the version from package.json,
+#   and creates the tag vX.Y.Z on the commit it built, together with the release.
 on:
   push:
     tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -25,10 +29,24 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Check the tag matches package.json
+      - name: Work out the tag and check it matches package.json
+        id: tag
         env:
-          TAG: ${{ github.ref_name }}
-        run: test "$TAG" = "v$(node -p 'require("./package.json").version')"
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          expected="v$(node -p 'require("./package.json").version')"
+          if [ "$EVENT" = "push" ]; then
+            test "$REF_NAME" = "$expected" || { echo "::error::Tag $REF_NAME but package.json says $expected"; exit 1; }
+          else
+            test "$REF" = "refs/heads/main" || { echo "::error::Run the release from main"; exit 1; }
+            if gh api "repos/$GITHUB_REPOSITORY/git/refs/tags/$expected" --silent 2>/dev/null; then
+              echo "::error::Tag $expected already exists. Bump the version in package.json first."; exit 1
+            fi
+          fi
+          echo "name=$expected" >> "$GITHUB_OUTPUT"
       - run: npm ci
       - run: npm audit signatures
       - run: npm run lint
@@ -40,7 +58,7 @@ jobs:
       - run: npm run test:e2e
       - name: Name the file and compute its checksum
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ steps.tag.outputs.name }}
         run: |
           mkdir release
           cp dist/index.html "release/pwnpoint-$TAG.html"
@@ -48,10 +66,12 @@ jobs:
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: release/pwnpoint-*.html
-      - name: Create the GitHub Release
+      - name: Create the GitHub Release (and the tag, for a manual run)
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
-        run: >
-          gh release create "$TAG" release/* --repo "$GITHUB_REPOSITORY"
-          --title "PwnPoint $TAG" --generate-notes --verify-tag
+          TAG: ${{ steps.tag.outputs.name }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = "push" ]; then where=(--verify-tag); else where=(--target "$GITHUB_SHA"); fi
+          gh release create "$TAG" release/* --repo "$GITHUB_REPOSITORY" \
+            --title "PwnPoint $TAG" --generate-notes "${where[@]}"
