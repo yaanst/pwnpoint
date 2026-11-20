@@ -52,9 +52,11 @@ async function deliver(
       const dt = new DataTransfer();
       dt.items.add(file);
       if (how === 'paste') {
-        document.body.dispatchEvent(
-          new ClipboardEvent('paste', { clipboardData: dt, bubbles: true }),
-        );
+        // Firefox ignores `clipboardData` passed to `new ClipboardEvent()`, and Playwright cannot
+        // put an image on the real clipboard there, so attach the data to a plain paste event.
+        const paste = new Event('paste', { bubbles: true, cancelable: true });
+        Object.defineProperty(paste, 'clipboardData', { value: dt });
+        document.body.dispatchEvent(paste);
       } else {
         const zone = document.querySelector('.dropzone');
         if (!zone) throw new Error('no drop zone');

@@ -21,6 +21,20 @@ const isTextField = (el: EventTarget | null) =>
   el instanceof HTMLElement &&
   (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName));
 
+/**
+ * Files from a paste. A copied screenshot is often only exposed as a clipboard *item* (not in
+ * `files`), depending on the browser and OS, so read both.
+ */
+function clipboardFiles(data: DataTransfer | null): File[] {
+  if (!data) return [];
+  const files = [...data.files];
+  if (files.length) return files;
+  return [...data.items]
+    .filter((item) => item.kind === 'file')
+    .map((item) => item.getAsFile())
+    .filter((f): f is File => f !== null);
+}
+
 export function EvidencePanel({ vault, finding }: { vault: Vault; finding: Finding }) {
   const [items, setItems] = useState<Evidence[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
@@ -96,7 +110,7 @@ export function EvidencePanel({ vault, finding }: { vault: Vault; finding: Findi
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
       if (isTextField(e.target) && !(e.target as HTMLElement).closest('.evidence')) return;
-      const files = [...(e.clipboardData?.files ?? [])];
+      const files = clipboardFiles(e.clipboardData);
       if (!files.length) return;
       e.preventDefault();
       void importFiles(files);
