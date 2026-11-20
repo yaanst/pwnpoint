@@ -6,6 +6,7 @@ import { trackSave } from '../findings/pendingSaves';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { createDebouncer } from '../ui/debounce';
 import { ACCEPTED_TYPES, ImageImportError, MAX_WIDTH, processImage } from './image';
+import { RedactionEditor } from './RedactionEditor';
 import {
   addEvidence,
   deleteEvidence,
@@ -44,6 +45,7 @@ export function EvidencePanel({ vault, finding }: { vault: Vault; finding: Findi
   const [busy, setBusy] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [toDelete, setToDelete] = useState<Evidence | null>(null);
+  const [editing, setEditing] = useState<Evidence | null>(null);
   const dragIndex = useRef<number | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -247,6 +249,14 @@ export function EvidencePanel({ vault, finding }: { vault: Vault; finding: Findi
                   </button>
                   <button
                     type="button"
+                    class="small"
+                    aria-label={`Redact or crop evidence ${i + 1}`}
+                    onClick={() => setEditing(e)}
+                  >
+                    Redact / crop
+                  </button>
+                  <button
+                    type="button"
                     class="small danger"
                     aria-label={`Delete evidence ${i + 1}`}
                     onClick={() => setToDelete(e)}
@@ -258,6 +268,19 @@ export function EvidencePanel({ vault, finding }: { vault: Vault; finding: Findi
             </li>
           ))}
         </ol>
+      )}
+
+      {editing && (
+        <RedactionEditor
+          vault={vault}
+          evidence={editing}
+          onClose={() => setEditing(null)}
+          onSaved={(updated) => {
+            setEditing(null);
+            setItems((list) => list.map((x) => (x.id === updated.id ? updated : x)));
+            setMessage('Image replaced with the redacted version.');
+          }}
+        />
       )}
 
       {toDelete && (
