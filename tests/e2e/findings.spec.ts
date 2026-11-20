@@ -62,7 +62,7 @@ test('creates a project and a finding, edits every field, and keeps it after a r
   await expect(page.getByTestId('cvss-score')).toHaveText('9.8');
 
   await page.getByRole('link', { name: '← Findings' }).click();
-  const item = page.getByRole('listitem').filter({ hasText: 'VLN.01' });
+  const item = page.getByTestId('row-VLN.01');
   await expect(item).toContainText('Kerberoastable service account');
   await expect(item).toContainText('Critical');
 });
@@ -75,6 +75,7 @@ test('requires a title before validating, and a justification for a severity ove
   await page.getByRole('button', { name: 'Create' }).click();
   await page.getByRole('button', { name: '+ New finding' }).click();
 
+  await expect(page.getByRole('heading', { name: /VLN\.01/ })).toBeVisible(); // editor is open
   await page.getByLabel('Status', { exact: true }).selectOption('validated');
   await expect(page.getByRole('alert')).toContainText('Add a title.');
   await expect(page.getByLabel('Status', { exact: true })).toHaveValue('draft');

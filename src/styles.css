@@ -578,3 +578,67 @@ button.small {
   font-size: 0.9rem;
   align-self: center;
 }
+
+.toolbar {
+  justify-content: space-between;
+  margin: 1rem 0 0.25rem;
+}
+
+.filters input[type='search'] {
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 0.35rem 0.6rem;
+  width: 14rem;
+}
+
+.filters select {
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 0.35rem 0.5rem;
+}
+
+.findings-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.findings-table th,
+.findings-table td {
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.findings-table th {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.findings-table .actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.findings-table .actions button + button {
+  margin-left: 0.4rem;
+}
+
+.spread {
+  justify-content: space-between;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

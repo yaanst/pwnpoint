@@ -11,7 +11,8 @@ import {
   findingRef,
   SEVERITIES,
 } from './model';
-import { getFinding, saveFinding } from './repository';
+import { DeleteFindingDialog } from './DeleteFindingDialog';
+import { deleteFinding, getFinding, saveFinding } from './repository';
 import { type SaveStatus, useAutosave } from './useAutosave';
 
 const SAVE_TEXT: Record<SaveStatus, string> = {
@@ -45,7 +46,9 @@ export function FindingEditorPage({ vault, id }: { vault: Vault; id: string }) {
 function FindingEditor({ vault, initial }: { vault: Vault; initial: Finding }) {
   const [f, setF] = useState(initial);
   const [statusProblems, setStatusProblems] = useState<string[]>([]);
-  const status = useAutosave(f, (value) => saveFinding(vault, value));
+  const [askDelete, setAskDelete] = useState(false);
+  const autosave = useAutosave(f, (value) => saveFinding(vault, value));
+  const status = autosave.status;
   const update = (patch: Partial<Finding>) => setF((prev) => ({ ...prev, ...patch }));
 
   const score = calculateBaseScore(f.cvss).score;
@@ -61,8 +64,11 @@ function FindingEditor({ vault, initial }: { vault: Vault; initial: Finding }) {
   return (
     <article class="editor" aria-labelledby="finding-heading">
       <header class="editor-head">
-        <p class="row">
+        <p class="row spread">
           <a href="#/findings">← Findings</a>
+          <button type="button" class="small danger" onClick={() => setAskDelete(true)}>
+            Delete finding
+          </button>
         </p>
         <h2 id="finding-heading">
           <span class="ref">{findingRef(f.number)}</span> {f.title || 'Untitled finding'}
@@ -203,6 +209,19 @@ function FindingEditor({ vault, initial }: { vault: Vault; initial: Finding }) {
           </div>
         )}
       </fieldset>
+
+      {askDelete && (
+        <DeleteFindingDialog
+          finding={f}
+          onCancel={() => setAskDelete(false)}
+          onConfirm={() => {
+            autosave.cancel(); // otherwise the pending save would bring it back
+            void deleteFinding(vault, f.id).then(() => {
+              location.hash = '#/findings';
+            });
+          }}
+        />
+      )}
     </article>
   );
 }

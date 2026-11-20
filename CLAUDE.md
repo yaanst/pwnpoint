@@ -29,8 +29,9 @@ from disk (`file://`). Supported browsers: Chrome, Edge, Firefox (all first-clas
 ## Workflow (trunk-based)
 
 - `main` is always releasable and protected (PR + green `ci` check, linear history).
-- Short-lived branches (< 1 day): `feat/…`, `fix/…`, `chore/…`. PRs ideally < 400 changed
-  lines (lock file excluded). Squash-merge, delete the branch.
+- Short-lived branches (< 1 day): `feat/…`, `fix/…`, `chore/…`. Each PR delivers a whole, usable
+  feature (maintainer's choice); size is secondary. Split only parts that stand on their own.
+  Squash-merge, delete the branch.
 - Conventional Commits for commit messages and PR titles (`feat:`, `fix:`, `chore:`, …).
 - Unfinished features are merged behind flags in `src/flags.ts`, never on long-lived branches.
 - PR description: what changed, how it was tested, screenshots for UI changes.
