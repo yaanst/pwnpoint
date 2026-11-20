@@ -80,6 +80,8 @@ export interface SlideLabels {
     continuedOn: string;
     continuedFrom: string;
     gains: string;
+    /** Branching scenarios, Markdown: "leads to: 3, 4". */
+    leadsTo: string;
   };
 }
 
@@ -127,6 +129,7 @@ export const LABELS: Record<SlideLanguage, SlideLabels> = {
       continuedOn: 'Continued on the next slide →',
       continuedFrom: '← Continued from the previous slide',
       gains: 'Gains',
+      leadsTo: 'leads to',
     },
   },
   fr: {
@@ -173,6 +176,7 @@ export const LABELS: Record<SlideLanguage, SlideLabels> = {
       continuedOn: 'Suite sur la diapositive suivante →',
       continuedFrom: '← Suite de la diapositive précédente',
       gains: 'Gain',
+      leadsTo: 'mène à',
     },
   },
 };

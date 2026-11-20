@@ -13,7 +13,8 @@ import {
 } from '../slides/layout';
 import { LABELS, type SlideTheme } from '../slides/theme';
 import { type FontSpec, type Measure, type TextRun, wrapRuns } from '../slides/wrap';
-import { type Scenario, scenarioRef, stepView, type StepView } from './model';
+import { columns, isLinear, successors } from './graph';
+import { type Scenario, scenarioRef, type ScenarioStep, stepView, type StepView } from './model';
 
 /** A scenario never takes more than this many slides; beyond, export is blocked. */
 export const MAX_SCENARIO_SLIDES = 2;
@@ -210,6 +211,8 @@ export function layoutScenario(
   const views = scenario.steps.map((s) => stepView(s, findings));
   const texts = nodeTexts(scenario, views, theme);
   const sizes = fontSizes(theme);
+  const succ = successors(scenario.steps);
+  if (!isLinear(succ)) return layoutGraph(scenario, views, texts, succ, theme, measure);
 
   for (const size of sizes) {
     const fit = fitFlow(texts, singleArea(), size, theme, measure);
@@ -321,6 +324,8 @@ function buildSlide(
   theme: SlideTheme,
   measure: Measure,
   part: Part,
+  /** Prebuilt flow elements (branching scenarios); otherwise the snake flow is drawn. */
+  flow?: SlideElement[],
 ): Slide {
   const L = LABELS[theme.language];
   const c = theme.colors;
@@ -474,7 +479,9 @@ function buildSlide(
       ),
     );
   }
-  elements.push(...flowElements(scenario, views, stepsHere, fit, offset, area, theme, measure));
+  elements.push(
+    ...(flow ?? flowElements(scenario, views, stepsHere, fit, offset, area, theme, measure)),
+  );
   if (part === 'first') {
     elements.push(
       textBox(
@@ -608,8 +615,6 @@ function flowElements(
 ): SlideElement[] {
   if (!texts.length) return [];
   const c = theme.colors;
-  const s = sizesFor(fit.sizePt, theme.minFontPt);
-  const fonts = { family: theme.bodyFont, monoFamily: theme.monoFont };
   const usedW = fit.cols * fit.nodeW + (fit.cols - 1) * GAP_X;
   const usedH = fit.rows * fit.nodeH + (fit.rows - 1) * GAP_Y;
   const x0 = area.x + (area.w - usedW) / 2;
@@ -618,7 +623,6 @@ function flowElements(
     const { row, col } = snakeCell(i, fit.cols);
     return { x: x0 + col * (fit.nodeW + GAP_X), y: y0 + row * (fit.nodeH + GAP_Y), row };
   };
-  const nodeFill = mix(c.background, c.text, 0.05);
   const elements: SlideElement[] = [];
 
   // Connectors first, so nodes sit on top of them.
@@ -639,51 +643,173 @@ function flowElements(
     const v = views[offset + i];
     if (!step || !v) return;
     const { x, y } = box(i);
-    const stripColor = v.missing
-      ? c.muted
-      : step.kind === 'finding' && v.severity
-        ? theme.severity[v.severity].bg
-        : c.muted;
-    elements.push({
-      kind: 'rect',
-      x,
-      y,
-      w: fit.nodeW,
-      h: fit.nodeH,
-      fill: v.missing ? c.background : nodeFill,
-      radius: 0.06,
-      stroke: step.chainBreaker ? c.accent : c.muted,
-      strokePt: step.chainBreaker ? 2.25 : 0.75,
-      dashed: v.missing,
-    });
-    elements.push({ kind: 'rect', x, y, w: STRIP, h: fit.nodeH, fill: stripColor });
-    const innerX = x + STRIP + PAD;
-    const innerW = fit.nodeW - STRIP - 2 * PAD;
-    let ty = y + PAD;
-    const add = (runs: TextRun[], pt: number, color: string, role: string) => {
-      if (!runs.length) return;
-      const tb = textBox(
-        [{ runs }],
-        {
-          role,
-          x: innerX,
-          y: ty,
-          w: innerW,
-          h: fit.nodeH,
-          sizePt: pt,
-          color,
-          ...fonts,
-        },
-        measure,
-      );
-      tb.h = tb.lines.length * ptToIn(pt) * LINE_HEIGHT;
-      tb.hiddenLines = 0;
-      ty += tb.h;
-      elements.push(tb);
-    };
-    add(t.tag, s.small, step.chainBreaker ? c.accent : c.muted, 'step-tag');
-    add(t.title, s.title, c.text, 'step-title');
-    add(t.gains, s.small, c.accent, 'step-gains');
+    elements.push(
+      ...nodeElements(step, v, t, { x, y, w: fit.nodeW, h: fit.nodeH }, fit.sizePt, theme, measure),
+    );
   });
   return elements;
+}
+
+/** One step box: outline, severity strip, tag, title and gains. */
+function nodeElements(
+  step: ScenarioStep,
+  v: StepView,
+  t: NodeText,
+  r: Area,
+  sizePt: number,
+  theme: SlideTheme,
+  measure: Measure,
+): SlideElement[] {
+  const c = theme.colors;
+  const s = sizesFor(sizePt, theme.minFontPt);
+  const fonts = { family: theme.bodyFont, monoFamily: theme.monoFont };
+  const nodeFill = mix(c.background, c.text, 0.05);
+  const elements: SlideElement[] = [];
+  const { x, y } = r;
+  const stripColor = v.missing
+    ? c.muted
+    : step.kind === 'finding' && v.severity
+      ? theme.severity[v.severity].bg
+      : c.muted;
+  elements.push({
+    kind: 'rect',
+    x,
+    y,
+    w: r.w,
+    h: r.h,
+    fill: v.missing ? c.background : nodeFill,
+    radius: 0.06,
+    stroke: step.chainBreaker ? c.accent : c.muted,
+    strokePt: step.chainBreaker ? 2.25 : 0.75,
+    dashed: v.missing,
+  });
+  elements.push({ kind: 'rect', x, y, w: STRIP, h: r.h, fill: stripColor });
+  const innerX = x + STRIP + PAD;
+  const innerW = r.w - STRIP - 2 * PAD;
+  let ty = y + PAD;
+  const add = (runs: TextRun[], pt: number, color: string, role: string) => {
+    if (!runs.length) return;
+    const tb = textBox(
+      [{ runs }],
+      { role, x: innerX, y: ty, w: innerW, h: r.h, sizePt: pt, color, ...fonts },
+      measure,
+    );
+    tb.h = tb.lines.length * ptToIn(pt) * LINE_HEIGHT;
+    tb.hiddenLines = 0;
+    ty += tb.h;
+    elements.push(tb);
+  };
+  add(t.tag, s.small, step.chainBreaker ? c.accent : c.muted, 'step-tag');
+  add(t.title, s.title, c.text, 'step-title');
+  add(t.gains, s.small, c.accent, 'step-gains');
+  return elements;
+}
+
+const GRAPH_GAP_X = 0.6;
+const GRAPH_GAP_Y = 0.25;
+
+/**
+ * Branching scenario: steps in columns from left to right (a step's column is its longest path
+ * from a start), arrows for every link. Always one slide: step text is reduced down to the
+ * theme minimum; if it still does not fit, export is blocked.
+ */
+function layoutGraph(
+  scenario: Scenario,
+  views: StepView[],
+  texts: NodeText[],
+  succ: number[][],
+  theme: SlideTheme,
+  measure: Measure,
+): ScenarioLayout {
+  const area = singleArea();
+  const cols = columns(succ);
+  const rows = Math.max(...cols.map((c) => c.length));
+  const nodeW = Math.min(MAX_NODE_W, (area.w - (cols.length - 1) * GRAPH_GAP_X) / cols.length);
+  const heightAt = (size: number) =>
+    Math.max(...texts.map((t) => nodeHeight(t, nodeW, size, theme, measure)));
+  const fits = (h: number) =>
+    nodeW >= MIN_NODE_W && rows * h + (rows - 1) * GRAPH_GAP_Y <= area.h + 1e-6;
+  const size = fontSizes(theme).find((pt) => fits(heightAt(pt))) ?? theme.minFontPt;
+  const nodeH = heightAt(size);
+  const blocked = !fits(nodeH);
+
+  const usedW = cols.length * nodeW + (cols.length - 1) * GRAPH_GAP_X;
+  const x0 = area.x + (area.w - usedW) / 2;
+  const pos = new Map<number, { x: number; y: number }>();
+  cols.forEach((col, k) => {
+    const colH = col.length * nodeH + (col.length - 1) * GRAPH_GAP_Y;
+    const top = area.y + Math.max(0, (area.h - colH) / 2);
+    col.forEach((i, r) =>
+      pos.set(i, { x: x0 + k * (nodeW + GRAPH_GAP_X), y: top + r * (nodeH + GRAPH_GAP_Y) }),
+    );
+  });
+
+  const colOf = new Map<number, number>();
+  cols.forEach((col, k) => col.forEach((i) => colOf.set(i, k)));
+  const flow: SlideElement[] = [];
+  const segment = (x1: number, y1: number, x2: number, y2: number, arrowEnd = false) =>
+    flow.push({ kind: 'line', x1, y1, x2, y2, color: theme.colors.muted, widthPt: 1.5, arrowEnd });
+  succ.forEach((next, i) => {
+    const a = pos.get(i);
+    next.forEach((j) => {
+      const b = pos.get(j);
+      const from = colOf.get(i) ?? 0;
+      const to = colOf.get(j) ?? 0;
+      if (!a || !b) return;
+      const x1 = a.x + nodeW;
+      const y1 = a.y + nodeH / 2;
+      const y2 = b.y + nodeH / 2;
+      if (to - from <= 1) {
+        segment(x1, y1, b.x, y2, true);
+        return;
+      }
+      // The link skips columns: go round the steps in between, above or below them, with
+      // right-angle segments in the gaps, so it never seems to enter another step.
+      const between = cols
+        .slice(from + 1, to)
+        .flat()
+        .map((k) => pos.get(k));
+      const top = Math.min(...between.map((p) => p?.y ?? Infinity));
+      const bottom = Math.max(...between.map((p) => (p?.y ?? -Infinity) + nodeH));
+      const above = top - GRAPH_GAP_Y / 2;
+      const below = bottom + GRAPH_GAP_Y / 2;
+      const mid = (y1 + y2) / 2;
+      const lane = Math.abs(mid - above) <= Math.abs(mid - below) ? above : below;
+      const gx1 = x1 + GRAPH_GAP_X / 2;
+      const gx2 = b.x - GRAPH_GAP_X / 2;
+      segment(x1, y1, gx1, y1);
+      segment(gx1, y1, gx1, lane);
+      segment(gx1, lane, gx2, lane);
+      segment(gx2, lane, gx2, y2);
+      segment(gx2, y2, b.x, y2, true);
+    });
+  });
+  scenario.steps.forEach((step, i) => {
+    const v = views[i];
+    const t = texts[i];
+    const p = pos.get(i);
+    if (v && t && p)
+      flow.push(...nodeElements(step, v, t, { ...p, w: nodeW, h: nodeH }, size, theme, measure));
+  });
+
+  const fit: FlowFit = { cols: cols.length, rows, nodeW, nodeH, sizePt: size };
+  const slide = buildSlide(
+    scenario,
+    views,
+    texts,
+    fit,
+    0,
+    texts.length,
+    area,
+    theme,
+    measure,
+    'only',
+    flow,
+  );
+  if (blocked) {
+    slide.warnings.unshift(
+      `The branching flow does not fit on one slide, even at ${theme.minFontPt} pt. Shorten step titles and gains, or remove some paths. Export is blocked.`,
+    );
+  }
+  return { slides: [slide], blocked, fontPt: size };
 }

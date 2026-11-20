@@ -224,11 +224,15 @@ function VectorPaste({
         />
         <button type="submit">Apply</button>
       </div>
-      <ul id="cvss-paste-errors" class="errors" role="alert">
-        {errors.map((e) => (
-          <li key={e}>{e}</li>
-        ))}
-      </ul>
+      <div id="cvss-paste-errors" role="alert">
+        {errors.length > 0 && (
+          <ul class="errors">
+            {errors.map((e) => (
+              <li key={e}>{e}</li>
+            ))}
+          </ul>
+        )}
+      </div>
     </form>
   );
 }

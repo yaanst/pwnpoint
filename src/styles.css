@@ -303,6 +303,12 @@ input[type='text'] {
   display: none;
 }
 
+/* Live-region wrappers of message lists: hidden while there is nothing to say. */
+[role='alert']:empty,
+[role='status']:empty {
+  display: none;
+}
+
 /* Layout */
 .topbar {
   display: flex;

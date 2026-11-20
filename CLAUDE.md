@@ -107,6 +107,9 @@ when behaviour changes.
   reduction to `theme.minFontPt`, split at a step boundary, max 2 slides else `blocked`),
   repository, `ScenarioEditor.tsx`, `StepList.tsx` (drag, buttons, Alt+arrows), `FindingPicker.tsx`
   (combobox), `ScenarioPreview.tsx` (preview + exports). Routes `#/scenarios`, `#/scenarios/<id>`.
+  Branching (`scenarioBranches` flag): `graph.ts` (pure: `step.next` links, forward only so no loops;
+  no link = the next step, empty = the goal; columns by longest path, `canBypass` for chain
+  breakers). The graph is drawn on one slide left to right; links that skip columns go round.
 - `src/backup/`: mission files (`.pwnp`). `mission.ts` (stored ZIP; plain or AES-GCM payload under a
   PBKDF2 key, `encryptWithPassphrase` in `crypto.ts`), `validate.ts` (strict field-by-field rebuild,
   limits, cross-references; never trust the file), `repository.ts` (collect, restore with replace /
