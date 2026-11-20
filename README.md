@@ -3,7 +3,8 @@
 Turn a pentest finding (CVSS 3.1 score + screenshot evidence) into a client-ready slide, and
 chain findings into full compromise scenarios shown as a flow on one slide.
 
-> **Status:** early development (milestone 0, scaffold). Not usable yet.
+> **Status:** early development (v0.1.0). Working today: a CVSS 3.1 base score calculator.
+> Findings, evidence, slides and scenarios are coming in the next milestones.
 
 ## Privacy model
 
