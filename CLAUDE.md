@@ -70,5 +70,6 @@ when behaviour changes.
   device, a CSP violation fires or a page error occurs. Always import `test` from there.
 - Node-side code (tools, tests, scripts, configs) is typechecked with `tsconfig.node.json`;
   app code in `src/` with `tsconfig.json` (no Node types).
-- `src/cvss/`: pure CVSS 3.1 module (milestone 1).
+- `src/cvss/`: pure CVSS 3.1 module (`cvss31.ts`), FIRST definitions and the calculator UI.
+- `src/ui/`: shared UI helpers (e.g. radio-group keyboard model).
 - Pure logic lives in plain `.ts` modules with colocated `*.test.ts` files; UI in `.tsx`.
