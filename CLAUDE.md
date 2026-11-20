@@ -73,6 +73,9 @@ when behaviour changes.
 - Node-side code (tools, tests, scripts, configs) is typechecked with `tsconfig.node.json`;
   app code in `src/` with `tsconfig.json` (no Node types).
 - `src/cvss/`: pure CVSS 3.1 module (`cvss31.ts`), FIRST definitions and the calculator UI.
+  `environmental.ts`: environmental metrics and score (spec 7.3), full vector parse/write (temporal
+  metrics refused), behind the `cvssAdvanced` flag. A finding's score always comes from
+  `findingCvss()` (`findings/model.ts`): base by default, environmental once any metric is set.
 - `src/ui/`: shared UI helpers (e.g. radio-group keyboard model).
 - `src/storage/crypto.ts`: encryption at rest (PBKDF2 → wrapped AES-GCM data key, per-record AAD).
 - `src/storage/schema.ts`: IndexedDB schema. `MIGRATIONS[n]` upgrades version n → n+1; never edit a

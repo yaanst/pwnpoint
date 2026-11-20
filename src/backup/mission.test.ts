@@ -187,6 +187,20 @@ describe('mission file', () => {
     expect(Object.keys(first(p.findings))).not.toContain('html');
   });
 
+  it('keeps valid environmental metrics and refuses invalid ones', async () => {
+    const good = await tampered((d) => {
+      first(d.findings as Record<string, unknown>[]).cvssEnv = { CR: 'H', MAV: 'A' };
+    });
+    expect(first(first(ok(openMissionFile(good)).projects).findings).cvssEnv).toEqual({
+      CR: 'H',
+      MAV: 'A',
+    });
+    const bad = await tampered((d) => {
+      first(d.findings as Record<string, unknown>[]).cvssEnv = { CR: 'X', MZ: 'A' };
+    });
+    expect(errors(openMissionFile(bad))).toContain('Finding 1 CVSS CR must be one of: H, M, L.');
+  });
+
   it('refuses images that are not PNG', async () => {
     const files = unzipStored(
       await buildMissionFile(sample(), { passphrase: null, appVersion: 't' }),

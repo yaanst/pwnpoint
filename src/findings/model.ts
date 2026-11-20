@@ -1,4 +1,6 @@
-import { type BaseMetrics, calculateBaseScore, type Severity, severityOf } from '../cvss/cvss31';
+import type { BaseMetrics, Severity } from '../cvss/cvss31';
+import { type CvssResult, cvssResult, type EnvMetrics } from '../cvss/environmental';
+import { isEnabled } from '../flags';
 
 export const SEVERITIES: readonly Severity[] = ['Critical', 'High', 'Medium', 'Low', 'None'];
 export type FindingStatus = 'draft' | 'validated';
@@ -38,6 +40,8 @@ export interface Finding {
   references: string[];
   status: FindingStatus;
   cvss: BaseMetrics;
+  /** Environmental metrics for this client's context. When any is set, its score is used. */
+  cvssEnv?: EnvMetrics;
   severityOverride?: SeverityOverride;
   createdAt: number;
   updatedAt: number;
@@ -78,12 +82,22 @@ export function newFinding(id: string, projectId: string, number: number, now: n
   };
 }
 
-export function cvssSeverity(finding: Pick<Finding, 'cvss'>): Severity {
-  return severityOf(calculateBaseScore(finding.cvss).score);
+/**
+ * The finding's CVSS score: the base score, or the environmental score when any environmental
+ * metric is set (and the cvssAdvanced feature is on).
+ */
+export function findingCvss(finding: Pick<Finding, 'cvss' | 'cvssEnv'>): CvssResult {
+  return cvssResult(finding.cvss, isEnabled('cvssAdvanced') ? finding.cvssEnv : undefined);
+}
+
+export function cvssSeverity(finding: Pick<Finding, 'cvss' | 'cvssEnv'>): Severity {
+  return findingCvss(finding).severity;
 }
 
 /** The severity shown on slides: the override when there is a valid one, else the CVSS rating. */
-export function effectiveSeverity(finding: Pick<Finding, 'cvss' | 'severityOverride'>): Severity {
+export function effectiveSeverity(
+  finding: Pick<Finding, 'cvss' | 'cvssEnv' | 'severityOverride'>,
+): Severity {
   const o = finding.severityOverride;
   return o && o.justification.trim() ? o.severity : cvssSeverity(finding);
 }
@@ -134,8 +148,6 @@ export function sortForReport(findings: Finding[]): Finding[] {
   const rank = (f: Finding) => SEVERITIES.indexOf(effectiveSeverity(f));
   return [...findings].sort(
     (a, b) =>
-      rank(a) - rank(b) ||
-      calculateBaseScore(b.cvss).score - calculateBaseScore(a.cvss).score ||
-      a.number - b.number,
+      rank(a) - rank(b) || findingCvss(b).score - findingCvss(a).score || a.number - b.number,
   );
 }

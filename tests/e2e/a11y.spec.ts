@@ -104,6 +104,9 @@ for (const scheme of ['light', 'dark'] as const) {
     await audit(page, 'scenario editor');
 
     await page.getByRole('link', { name: 'CVSS calculator' }).click();
+    // Environmental metrics (behind the cvssAdvanced flag): audit them open.
+    const environmental = page.getByText("Environmental metrics (this client's context)");
+    if (await environmental.count()) await environmental.click();
     await audit(page, 'CVSS calculator');
     await page.getByRole('link', { name: 'Settings' }).click();
     await audit(page, 'settings');

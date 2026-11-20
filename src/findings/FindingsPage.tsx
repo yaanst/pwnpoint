@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { OpenMissionButton } from '../backup/OpenMission';
 import { SaveMissionDialog } from '../backup/SaveMissionDialog';
-import { calculateBaseScore, type Severity } from '../cvss/cvss31';
+import type { Severity } from '../cvss/cvss31';
 import { ProjectExport } from '../export/ProjectExport';
 import type { Vault } from '../storage/vault';
 import { rememberedProject, rememberProject } from '../ui/currentProject';
@@ -12,6 +12,7 @@ import { DeleteFindingDialog } from './DeleteFindingDialog';
 import { whenSaved } from './pendingSaves';
 import {
   effectiveSeverity,
+  findingCvss,
   filterFindings,
   type Finding,
   type FindingFilter,
@@ -303,7 +304,7 @@ function FindingTable(props: {
               <td>
                 <span class={`badge sev-${severity.toLowerCase()}`}>{severity}</span>
               </td>
-              <td>{calculateBaseScore(f.cvss).score.toFixed(1)}</td>
+              <td>{findingCvss(f).score.toFixed(1)}</td>
               <td>{f.status === 'draft' ? 'Draft' : 'Validated'}</td>
               <td class="actions">
                 <button

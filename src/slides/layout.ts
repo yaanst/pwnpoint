@@ -1,5 +1,4 @@
-import { calculateBaseScore, toVector } from '../cvss/cvss31';
-import { effectiveSeverity, type Finding, findingRef } from '../findings/model';
+import { effectiveSeverity, type Finding, findingRef, findingCvss } from '../findings/model';
 import { type Inline, parseMarkdownLite } from '../text/markdownLite';
 import { LABELS, type SlideTheme } from './theme';
 import { type FontSpec, type Line, type Measure, type TextRun, wrapRuns } from './wrap';
@@ -188,6 +187,14 @@ export function textBox(paragraphs: Paragraph[], o: TextOpts, measure: Measure):
   };
 }
 
+/** A CVSS vector split after the base metrics: `CVSS:3.1/AV:…/A:H` then `CR:L/MAV:A…`. */
+export function vectorLines(vector: string): string[] {
+  const parts = vector.split('/');
+  const base = parts.slice(0, 9).join('/');
+  const env = parts.slice(9).join('/');
+  return env ? [base, env] : [base];
+}
+
 export function buildFindingSlide(
   finding: Finding,
   evidence: EvidenceRef[],
@@ -207,7 +214,8 @@ export function buildFindingSlide(
   const fonts = { family: theme.bodyFont, monoFamily: theme.monoFont };
   const heading = { family: theme.headingFont, monoFamily: theme.monoFont };
   const severity = effectiveSeverity(finding);
-  const score = calculateBaseScore(finding.cvss).score;
+  const cvss = findingCvss(finding);
+  const score = cvss.score;
   const sev = theme.severity[severity];
   const elements: SlideElement[] = [];
   const warnings: string[] = [];
@@ -280,7 +288,10 @@ export function buildFindingSlide(
       [
         {
           runs: [
-            { text: `${L.cvss} `, bold: false },
+            {
+              text: `${cvss.kind === 'environmental' ? L.cvssEnvironmental : L.cvss} `,
+              bold: false,
+            },
             { text: score.toFixed(1), bold: true },
           ],
         },
@@ -299,13 +310,14 @@ export function buildFindingSlide(
       measure,
     ),
     textBox(
-      [{ runs: [{ text: toVector(finding.cvss), mono: true }] }],
+      // Base metrics on the first line; environmental ones, if any, on a second line.
+      vectorLines(cvss.vector).map((text) => ({ runs: [{ text, mono: true }] })),
       {
         role: 'vector',
         x: right - 5,
         y: 1.35,
         w: 5,
-        h: 0.25,
+        h: cvss.kind === 'environmental' ? 0.36 : 0.25,
         sizePt: sizes.small,
         color: c.muted,
         align: 'right',

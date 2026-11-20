@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
-import { calculateBaseScore, type Severity } from '../cvss/cvss31';
+import type { Severity } from '../cvss/cvss31';
+import { hasEnvironmental } from '../cvss/environmental';
 import { CvssCalculator } from '../cvss/CvssCalculator';
 import { EvidencePanel } from '../evidence/EvidencePanel';
 import { UsedInScenarios } from '../scenarios/UsedInScenarios';
@@ -8,6 +9,7 @@ import type { Vault } from '../storage/vault';
 import { LinesField, RichTextField, StepsField } from '../ui/fields';
 import {
   cvssSeverity,
+  findingCvss,
   effectiveSeverity,
   type Finding,
   findingProblems,
@@ -54,7 +56,7 @@ function FindingEditor({ vault, initial }: { vault: Vault; initial: Finding }) {
   const status = autosave.status;
   const update = (patch: Partial<Finding>) => setF((prev) => ({ ...prev, ...patch }));
 
-  const score = calculateBaseScore(f.cvss).score;
+  const score = findingCvss(f).score;
   const severity = effectiveSeverity(f);
   const override = f.severityOverride;
 
@@ -153,7 +155,19 @@ function FindingEditor({ vault, initial }: { vault: Vault; initial: Finding }) {
 
         <EvidencePanel vault={vault} finding={f} />
 
-        <CvssCalculator value={f.cvss} onChange={(cvss) => update({ cvss })} />
+        <CvssCalculator
+          value={f.cvss}
+          onChange={(cvss) => update({ cvss })}
+          env={f.cvssEnv}
+          onEnvChange={(env) =>
+            setF((prev) => {
+              const next = { ...prev };
+              if (hasEnvironmental(env)) next.cvssEnv = env;
+              else delete next.cvssEnv;
+              return next;
+            })
+          }
+        />
 
         <fieldset class="field">
           <legend>Severity</legend>
