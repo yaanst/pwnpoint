@@ -39,9 +39,10 @@ from disk (`file://`). Supported browsers: Chrome, Edge, Firefox (all first-clas
 ## Delivery
 
 - Merges to `main` deploy `dist/` to GitHub Pages (`.github/workflows/deploy.yml`).
-- Release: bump `version` in `package.json` in a PR, merge, then push tag `vX.Y.Z` on `main`.
-  `.github/workflows/release.yml` checks the tag matches `package.json`, runs every check and
-  publishes `pwnpoint-vX.Y.Z.html`, `SHA256SUMS` and a build provenance attestation.
+- Release: bump `version` in `package.json` in a PR and merge it. Then either push tag `vX.Y.Z`
+  on `main`, or run the Release workflow manually on `main` (Actions → Release → Run workflow),
+  which creates the tag itself. `.github/workflows/release.yml` checks the version, runs every
+  check and publishes `pwnpoint-vX.Y.Z.html`, `SHA256SUMS` and a build provenance attestation.
 
 ## Definition of done (per PR)
 
