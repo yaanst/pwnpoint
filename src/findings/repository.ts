@@ -1,3 +1,4 @@
+import { copyEvidence, deleteEvidenceOf } from '../evidence/repository';
 import type { Vault } from '../storage/vault';
 import { duplicateOf, type Finding, newFinding, type Project } from './model';
 
@@ -81,10 +82,13 @@ export async function duplicateFinding(
   now = Date.now(),
 ): Promise<Finding> {
   const copy = duplicateOf(finding, newId(), await takeNumber(vault, finding.projectId), now);
-  return saveFinding(vault, copy, now);
+  const saved = await saveFinding(vault, copy, now);
+  await copyEvidence(vault, finding.id, saved);
+  return saved;
 }
 
-/** Deletes a finding. Its number is not reused. Evidence and scenario links are handled later. */
-export function deleteFinding(vault: Vault, id: string): Promise<void> {
-  return vault.delete('findings', id);
+/** Deletes a finding and its evidence. Its number is not reused. Scenario links come later. */
+export async function deleteFinding(vault: Vault, id: string): Promise<void> {
+  await deleteEvidenceOf(vault, id);
+  await vault.delete('findings', id);
 }

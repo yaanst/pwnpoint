@@ -86,6 +86,10 @@ when behaviour changes.
   the vault. Finding numbers come from a per-project counter and are never reused.
 - `src/findings/FindingsPage.tsx`, `FindingEditor.tsx`: project picker, list, editor (autosave via
   `useAutosave`). Shared form fields live in `src/ui/fields.tsx`.
+- `src/evidence/`: screenshot import (`image.ts`: canvas re-encode, 2560 px cap), `png.ts` chunk
+  whitelist (no metadata ever stored), repository (images are sealed vault bytes, metadata separate),
+  `EvidencePanel.tsx`. Use `vault.put(…, bytes)` / `vault.getBytes` for binary content.
+- `src/findings/pendingSaves.ts`: wrap every async save in `trackSave()`; readers call `whenSaved()`.
 - `src/settings/`: Settings panels. `src/ui/router.ts`: hash router (`matchRoute`: `#/findings`,
   `#/findings/<id>`, `#/cvss`, `#/settings`).
 - Pure logic lives in plain `.ts` modules with colocated `*.test.ts` files; UI in `.tsx`.

@@ -1,9 +1,10 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { type BaseMetrics } from './cvss/cvss31';
 import { CvssCalculator } from './cvss/CvssCalculator';
 import { FindingEditorPage } from './findings/FindingEditor';
 import { FindingsPage } from './findings/FindingsPage';
 import { DEFAULT_CVSS } from './findings/model';
+import { guardUnloadWhileSaving } from './findings/pendingSaves';
 import { SecuritySettings } from './settings/SecuritySettings';
 import type { Vault } from './storage/vault';
 import { VaultGate } from './storage/VaultGate';
@@ -12,6 +13,7 @@ import { matchRoute, type Page, useHashRoute } from './ui/router';
 export function App() {
   const page = matchRoute(useHashRoute());
   const [metrics, setMetrics] = useState<BaseMetrics>(DEFAULT_CVSS);
+  useEffect(guardUnloadWhileSaving, []);
   const current = (names: Page['name'][]) => (names.includes(page.name) ? 'page' : undefined);
 
   const render = (vault: Vault) => {

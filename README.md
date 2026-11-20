@@ -3,8 +3,15 @@
 Turn a pentest finding (CVSS 3.1 score + screenshot evidence) into a client-ready slide, and
 chain findings into full compromise scenarios shown as a flow on one slide.
 
-> **Status:** early development (v0.1.0). Working today: a CVSS 3.1 base score calculator.
-> Findings, evidence, slides and scenarios are coming in the next milestones.
+> **Status:** early development. Working today: projects and findings (editor, list, filters),
+> CVSS 3.1 scoring, and evidence screenshots. Slides, scenarios and backups are coming next.
+
+## Evidence screenshots
+
+Paste a screenshot (Ctrl/Cmd+V) anywhere on a finding, drop image files, or pick them. Every
+image is re-encoded through a canvas, which removes EXIF/GPS data, comments and every other
+piece of metadata, and only the image data chunks are kept in the stored PNG. Images wider than
+2560 px are downscaled. SVG files are refused. Images are stored encrypted like everything else.
 
 ## Privacy model
 

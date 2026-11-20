@@ -3,7 +3,9 @@ import {
   changePassphrase as rewrap,
   createKeyring,
   type Keyring,
+  open,
   openJson,
+  seal,
   sealJson,
   unlockKeyring,
 } from './crypto';
@@ -141,9 +143,40 @@ export class Vault {
     await this.db.put('meta', keyring, 'keyring');
   }
 
-  async put<T>(store: ContentStore, meta: RecordMeta, value: T): Promise<void> {
-    const record = { ...meta, updatedAt: meta.updatedAt ?? Date.now(), value };
-    await this.db.put(store, await encode(this.activeKey(), store, record));
+  /**
+   * Stores a record. `bytes` (optional) is binary content sealed separately; when omitted, the
+   * record keeps the bytes it already had, so metadata edits never rewrite large images.
+   */
+  async put<T>(
+    store: ContentStore,
+    meta: RecordMeta,
+    value: T,
+    bytes?: Uint8Array<ArrayBuffer>,
+  ): Promise<void> {
+    const key = this.activeKey();
+    const record: Decoded = { ...meta, updatedAt: meta.updatedAt ?? Date.now(), value };
+    if (bytes) record.bytes = bytes;
+    const encoded = await encode(key, store, record);
+    if (!bytes) {
+      const existing = await this.db.get(store, meta.id);
+      if (existing?.bytes) encoded.bytes = existing.bytes;
+    }
+    await this.db.put(store, encoded);
+  }
+
+  /** The binary content of a record, decrypted, or undefined if it has none. */
+  async getBytes(store: ContentStore, id: string): Promise<Uint8Array<ArrayBuffer> | undefined> {
+    const key = this.activeKey();
+    const stored = await this.db.get(store, id);
+    return stored ? (await decode(key, store, stored, true)).bytes : undefined;
+  }
+
+  /** All evidence records of a finding (metadata only; bytes are not decrypted). */
+  async listByFinding<T>(findingId: string): Promise<(RecordMeta & { value: T })[]> {
+    const key = this.activeKey();
+    const stored = await this.db.getAllFromIndex('evidence', 'findingId', findingId);
+    const decoded = await Promise.all(stored.map((s) => decode(key, 'evidence', s)));
+    return decoded.map(({ bytes: _bytes, ...d }) => ({ ...d, value: d.value as T }));
   }
 
   async get<T>(store: ContentStore, id: string): Promise<T | undefined> {
@@ -162,7 +195,7 @@ export class Vault {
     const decoded = await Promise.all(stored.map((s) => decode(key, store, s)));
     return decoded
       .sort((a, b) => b.updatedAt - a.updatedAt)
-      .map((d) => ({ ...d, value: d.value as T }));
+      .map(({ bytes: _bytes, ...d }) => ({ ...d, value: d.value as T }));
   }
 
   async delete(store: ContentStore, id: string): Promise<void> {
@@ -187,37 +220,54 @@ export class Vault {
     const out: [ContentStore, Decoded][] = [];
     for (const store of CONTENT_STORES) {
       for (const stored of await this.db.getAll(store)) {
-        out.push([store, await decode(key, store, stored)]);
+        out.push([store, await decode(key, store, stored, true)]);
       }
     }
     return out;
   }
 }
 
-type Decoded = Required<Pick<RecordMeta, 'id' | 'updatedAt'>> & RecordMeta & { value: unknown };
+type Decoded = Required<Pick<RecordMeta, 'id' | 'updatedAt'>> &
+  RecordMeta & { value: unknown; bytes?: Uint8Array<ArrayBuffer> };
 
 const context = (store: ContentStore, id: string) => `${store}/${id}`;
+const bytesContext = (store: ContentStore, id: string) => `${store}/${id}#bytes`;
 
 async function encode(
   key: CryptoKey | null,
   store: ContentStore,
   r: Decoded,
 ): Promise<StoredRecord> {
-  const { value, ...meta } = r;
+  const { value, bytes, ...meta } = r;
   const clean: StoredRecord = { id: meta.id, updatedAt: meta.updatedAt, payload: { plain: value } };
   if (meta.projectId !== undefined) clean.projectId = meta.projectId;
   if (meta.findingId !== undefined) clean.findingId = meta.findingId;
   if (key) clean.payload = { sealed: await sealJson(key, value, context(store, meta.id)) };
+  if (bytes) {
+    clean.bytes = key
+      ? { sealed: await seal(key, bytes, bytesContext(store, meta.id)) }
+      : { plain: bytes };
+  }
   return clean;
 }
 
+/** Decodes a stored record. Bytes are only decrypted when `withBytes` is set (they can be large). */
 async function decode(
   key: CryptoKey | null,
   store: ContentStore,
   s: StoredRecord,
+  withBytes = false,
 ): Promise<Decoded> {
-  const { payload, ...meta } = s;
-  if ('plain' in payload) return { ...meta, value: payload.plain };
-  if (!key) throw new VaultLockedError();
-  return { ...meta, value: await openJson(key, payload.sealed, context(store, s.id)) };
+  const { payload, bytes, ...meta } = s;
+  let value: unknown;
+  if ('plain' in payload) value = payload.plain;
+  else if (!key) throw new VaultLockedError();
+  else value = await openJson(key, payload.sealed, context(store, s.id));
+  const out: Decoded = { ...meta, value };
+  if (withBytes && bytes) {
+    if ('plain' in bytes) out.bytes = bytes.plain;
+    else if (!key) throw new VaultLockedError();
+    else out.bytes = await open(key, bytes.sealed, bytesContext(store, s.id));
+  }
+  return out;
 }
