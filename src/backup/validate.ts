@@ -1,3 +1,4 @@
+import { ENV_METRICS, ENV_ORDER, type EnvMetrics } from '../cvss/environmental';
 import { BASE_METRICS, type BaseMetrics, METRIC_ORDER, type Severity } from '../cvss/cvss31';
 import type { Evidence } from '../evidence/repository';
 import {
@@ -166,6 +167,15 @@ function finding(c: Checker, v: unknown, i: number): Finding {
     createdAt: c.time(o.createdAt, where),
     updatedAt: c.time(o.updatedAt, where),
   };
+  if (o.cvssEnv !== undefined) {
+    const e = c.obj(o.cvssEnv, `${where} environmental metrics`);
+    const env: Record<string, string> = {};
+    for (const key of ENV_ORDER) {
+      if (e[key] === undefined) continue;
+      env[key] = c.oneOf(e[key], ENV_METRICS[key], `${where} CVSS ${key}`);
+    }
+    if (Object.keys(env).length) f.cvssEnv = env as EnvMetrics;
+  }
   if (o.severityOverride !== undefined) {
     const s = c.obj(o.severityOverride, `${where} severity override`);
     f.severityOverride = {

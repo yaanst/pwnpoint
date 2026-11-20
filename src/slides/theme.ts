@@ -51,6 +51,8 @@ export interface SlideLabels {
   assets: string;
   severity: Record<Severity, string>;
   cvss: string;
+  /** Score label when the environmental score is used. */
+  cvssEnvironmental: string;
   untitled: string;
   figure: string;
   logo: string;
@@ -89,6 +91,7 @@ export const LABELS: Record<SlideLanguage, SlideLabels> = {
     assets: 'Affected assets',
     severity: { Critical: 'Critical', High: 'High', Medium: 'Medium', Low: 'Low', None: 'None' },
     cvss: 'CVSS 3.1',
+    cvssEnvironmental: 'CVSS 3.1 environmental',
     untitled: 'Untitled finding',
     figure: 'Figure',
     logo: 'Logo',
@@ -139,6 +142,7 @@ export const LABELS: Record<SlideLanguage, SlideLabels> = {
       None: 'Aucune',
     },
     cvss: 'CVSS 3.1',
+    cvssEnvironmental: 'CVSS 3.1 environnemental',
     untitled: 'Vulnérabilité sans titre',
     figure: 'Figure',
     logo: 'Logo',

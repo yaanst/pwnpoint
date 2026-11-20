@@ -1,26 +1,35 @@
 import { useRef, useState } from 'preact/hooks';
 import { isEnabled } from '../flags';
 import { nextRadioIndex } from '../ui/roving';
-import {
-  BASE_METRICS,
-  type BaseMetrics,
-  calculateBaseScore,
-  METRIC_ORDER,
-  type MetricKey,
-  parseVector,
-  toVector,
-} from './cvss31';
+import { BASE_METRICS, type BaseMetrics, METRIC_ORDER, parseVector } from './cvss31';
 import { METRIC_INFO } from './definitions';
+import { ENV_INFO } from './envDefinitions';
+import {
+  cvssResult,
+  ENV_METRICS,
+  ENV_ORDER,
+  type EnvMetrics,
+  hasEnvironmental,
+  parseFullVector,
+} from './environmental';
 
 interface Props {
   value: BaseMetrics;
   onChange: (value: BaseMetrics) => void;
+  /** Environmental metrics (shown only with the cvssAdvanced feature). */
+  env?: EnvMetrics | undefined;
+  onEnvChange?: (env: EnvMetrics) => void;
 }
 
-/** CVSS 3.1 base metrics editor: one segmented radio group per metric, live score, vector paste. */
-export function CvssCalculator({ value, onChange }: Props) {
-  const result = calculateBaseScore(value);
-  const vector = toVector(value);
+/**
+ * CVSS 3.1 editor: one segmented radio group per metric, live score, vector paste. With the
+ * cvssAdvanced feature, an Environmental section whose score, once any metric is set, replaces
+ * the base score.
+ */
+export function CvssCalculator({ value, onChange, env, onEnvChange }: Props) {
+  const advanced = isEnabled('cvssAdvanced') && !!onEnvChange;
+  const result = cvssResult(value, advanced ? env : undefined);
+  const environmental = result.kind === 'environmental';
   return (
     <section class="cvss" aria-labelledby="cvss-title">
       <h2 id="cvss-title">CVSS 3.1 base score</h2>
@@ -29,42 +38,91 @@ export function CvssCalculator({ value, onChange }: Props) {
           <MetricGroup
             key={key}
             metric={key}
+            name={METRIC_INFO[key].name}
+            values={BASE_METRICS[key]}
+            info={METRIC_INFO[key].values}
             selected={value[key]}
             // v always comes from BASE_METRICS[key], so the result is a valid BaseMetrics.
             onSelect={(v) => onChange({ ...value, [key]: v } as BaseMetrics)}
           />
         ))}
       </div>
+      {advanced && onEnvChange && <EnvironmentalSection env={env ?? {}} onChange={onEnvChange} />}
       <output class="cvss-result" aria-live="polite">
+        {environmental && <span class="muted">Environmental score</span>}
         <span class="cvss-score" data-testid="cvss-score">
           {result.score.toFixed(1)}
         </span>
         <span class={`badge sev-${result.severity.toLowerCase()}`} data-testid="cvss-severity">
           {result.severity}
         </span>
+        {environmental && (
+          <span class="muted" data-testid="cvss-base-score">
+            (base {result.baseScore.toFixed(1)})
+          </span>
+        )}
         <code class="cvss-vector" data-testid="cvss-vector">
-          {vector}
+          {result.vector}
         </code>
       </output>
-      <VectorPaste onApply={onChange} />
-      {isEnabled('cvssAdvanced') && (
-        <details class="cvss-advanced">
-          <summary>Advanced: temporal and environmental metrics</summary>
-          <p>Not available yet.</p>
-        </details>
-      )}
+      <VectorPaste
+        advanced={advanced}
+        onApply={(metrics, nextEnv) => {
+          onChange(metrics);
+          if (advanced && onEnvChange) onEnvChange(nextEnv);
+        }}
+      />
     </section>
   );
 }
 
+function EnvironmentalSection(p: { env: EnvMetrics; onChange: (env: EnvMetrics) => void }) {
+  const set = hasEnvironmental(p.env);
+  return (
+    <details class="cvss-advanced" open={set}>
+      <summary>Environmental metrics (this client's context)</summary>
+      <p class="muted">
+        Leave everything on <em>Not defined</em> to use the base score. Once one metric is set, the
+        environmental score replaces the base score for the severity, sorting and slides.
+      </p>
+      <div class="cvss-groups">
+        {ENV_ORDER.map((key) => (
+          <MetricGroup
+            key={key}
+            metric={key}
+            name={ENV_INFO[key].name}
+            values={['X', ...ENV_METRICS[key]]}
+            info={ENV_INFO[key].values}
+            selected={p.env[key] ?? 'X'}
+            onSelect={(v) => {
+              // Not defined (X) is never stored; v otherwise comes from ENV_METRICS[key].
+              const merged: Record<string, string> = { ...p.env, [key]: v };
+              const next = Object.fromEntries(
+                Object.entries(merged).filter(([, value]) => value !== 'X'),
+              );
+              p.onChange(next as EnvMetrics);
+            }}
+          />
+        ))}
+      </div>
+      {set && (
+        <button type="button" class="small" onClick={() => p.onChange({})}>
+          Clear environmental metrics
+        </button>
+      )}
+    </details>
+  );
+}
+
 function MetricGroup(props: {
-  metric: MetricKey;
+  metric: string;
+  name: string;
+  values: readonly string[];
+  info: Record<string, { label: string; definition: string }>;
   selected: string;
   onSelect: (v: string) => void;
 }) {
-  const { metric, selected, onSelect } = props;
-  const info = METRIC_INFO[metric];
-  const values: readonly string[] = BASE_METRICS[metric];
+  const { metric, name, values, info, selected, onSelect } = props;
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
   const [tipsHidden, setTipsHidden] = useState(false);
   const labelId = `cvss-${metric}-label`;
@@ -85,7 +143,7 @@ function MetricGroup(props: {
   return (
     <div class="metric">
       <span class="metric-label" id={labelId}>
-        {info.name} <abbr>({metric})</abbr>
+        {name} <abbr>({metric})</abbr>
       </span>
       <div
         class={`segmented${tipsHidden ? ' tips-hidden' : ''}`}
@@ -96,7 +154,7 @@ function MetricGroup(props: {
         onMouseLeave={() => setTipsHidden(false)}
       >
         {values.map((v, i) => {
-          const value = info.values[v];
+          const value = info[v];
           const checked = v === selected;
           const tipId = `cvss-${metric}-${v}-tip`;
           return (
@@ -125,15 +183,23 @@ function MetricGroup(props: {
   );
 }
 
-function VectorPaste({ onApply }: { onApply: (value: BaseMetrics) => void }) {
+function VectorPaste({
+  advanced,
+  onApply,
+}: {
+  advanced: boolean;
+  onApply: (value: BaseMetrics, env: EnvMetrics) => void;
+}) {
   const [text, setText] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
 
   const apply = (event: Event) => {
     event.preventDefault();
-    const result = parseVector(text);
+    const result = advanced
+      ? parseFullVector(text)
+      : ((r) => (r.ok ? { ...r, env: {} } : r))(parseVector(text));
     if (result.ok) {
-      onApply(result.metrics);
+      onApply(result.metrics, result.env);
       setErrors([]);
       setText('');
     } else {

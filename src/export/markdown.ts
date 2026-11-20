@@ -1,5 +1,4 @@
-import { calculateBaseScore, toVector } from '../cvss/cvss31';
-import { effectiveSeverity, type Finding, findingRef } from '../findings/model';
+import { effectiveSeverity, type Finding, findingRef, findingCvss } from '../findings/model';
 import { type Scenario, scenarioRef, stepView } from '../scenarios/model';
 import { LABELS, type SlideLanguage } from '../slides/theme';
 
@@ -22,12 +21,14 @@ export function findingMarkdown(
 ): string {
   const L = LABELS[language];
   const severity = effectiveSeverity(f);
-  const score = calculateBaseScore(f.cvss).score.toFixed(1);
+  const cvss = findingCvss(f);
+  const score = cvss.score.toFixed(1);
+  const label = cvss.kind === 'environmental' ? L.cvssEnvironmental : L.cvss;
   const title = (f.title.trim() || L.untitled).replace(/\n+/g, ' ');
   const lines = [
     `${'#'.repeat(headingLevel)} ${findingRef(f.number)} ${title}`,
     '',
-    `**${L.severityLabel}:** ${L.severity[severity]} (${L.cvss} ${score}, \`${toVector(f.cvss)}\`)`,
+    `**${L.severityLabel}:** ${L.severity[severity]} (${label} ${score}, \`${cvss.vector}\`)`,
   ];
   const reason = f.severityOverride?.justification.trim();
   if (reason) lines.push('', `**${L.overrideReason}:** ${reason.replace(/\n+/g, ' ')}`);

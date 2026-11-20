@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { type BaseMetrics } from './cvss/cvss31';
 import { CvssCalculator } from './cvss/CvssCalculator';
+import type { EnvMetrics } from './cvss/environmental';
 import { FindingEditorPage } from './findings/FindingEditor';
 import { FindingsPage } from './findings/FindingsPage';
 import { ScenarioEditorPage } from './scenarios/ScenarioEditor';
@@ -18,6 +19,7 @@ import { matchRoute, type Page, useHashRoute } from './ui/router';
 export function App() {
   const page = matchRoute(useHashRoute());
   const [metrics, setMetrics] = useState<BaseMetrics>(DEFAULT_CVSS);
+  const [env, setEnv] = useState<EnvMetrics>({});
   useEffect(guardUnloadWhileSaving, []);
   const current = (names: Page['name'][]) => (names.includes(page.name) ? 'page' : undefined);
 
@@ -32,7 +34,9 @@ export function App() {
       case 'scenario':
         return <ScenarioEditorPage vault={vault} id={page.id} />;
       case 'cvss':
-        return <CvssCalculator value={metrics} onChange={setMetrics} />;
+        return (
+          <CvssCalculator value={metrics} onChange={setMetrics} env={env} onEnvChange={setEnv} />
+        );
       case 'settings':
         return (
           <div class="stack-sections">
