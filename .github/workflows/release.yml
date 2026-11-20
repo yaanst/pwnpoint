@@ -54,7 +54,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run check:urls
-      - run: npx playwright install --with-deps chromium firefox
+      - run: npx playwright install chromium firefox # browsers only; see ci.yml
       - run: npm run test:e2e
       - name: Name the file and compute its checksum
         env:
