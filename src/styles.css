@@ -710,3 +710,66 @@ button.small {
 .small-text {
   font-size: 0.8rem;
 }
+
+/* Redaction editor */
+.dialog.redaction {
+  max-width: min(96vw, 80rem);
+  width: 96vw;
+  /* Pinned to the top so the image does not move while the edits list grows. */
+  margin-top: 2vh;
+}
+
+.redact-canvas-wrap {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.redact-canvas-wrap canvas {
+  max-width: 100%;
+  max-height: 65vh;
+  height: auto;
+}
+
+.redact-canvas-wrap:has(canvas.drawing) {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.tools {
+  border: none;
+  padding: 0;
+  margin: 0 0 0.5rem;
+}
+
+.warning-text {
+  color: var(--danger);
+}
+
+.rect-form {
+  margin-top: 0.5rem;
+}
+
+.rect-form .num {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.rect-form input[type='number'] {
+  width: 5.5rem;
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 0.2rem 0.4rem;
+}
+
+.regions {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+}

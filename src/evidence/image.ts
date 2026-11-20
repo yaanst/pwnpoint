@@ -75,3 +75,41 @@ export async function drawToPng(
   const bytes = stripPngMetadata(new Uint8Array(await blob.arrayBuffer()));
   return { bytes, width, height, ...original };
 }
+
+/** Encodes raw RGBA pixels (e.g. after redaction) as clean PNG bytes. */
+export async function pixelsToPng(p: {
+  data: Uint8ClampedArray;
+  width: number;
+  height: number;
+}): Promise<ProcessedImage> {
+  const canvas = document.createElement('canvas');
+  canvas.width = p.width;
+  canvas.height = p.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new ImageImportError('Your browser could not process this image.');
+  ctx.putImageData(new ImageData(new Uint8ClampedArray(p.data), p.width, p.height), 0, 0);
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) throw new ImageImportError('Your browser could not encode this image.');
+  const bytes = stripPngMetadata(new Uint8Array(await blob.arrayBuffer()));
+  return {
+    bytes,
+    width: p.width,
+    height: p.height,
+    originalWidth: p.width,
+    originalHeight: p.height,
+  };
+}
+
+/** Decodes stored PNG bytes into RGBA pixels. */
+export async function pngToPixels(bytes: Uint8Array<ArrayBuffer>) {
+  const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+  const canvas = document.createElement('canvas');
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new ImageImportError('Your browser could not process this image.');
+  ctx.drawImage(bitmap, 0, 0);
+  bitmap.close();
+  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  return { data: img.data, width: img.width, height: img.height };
+}

@@ -89,6 +89,8 @@ when behaviour changes.
 - `src/evidence/`: screenshot import (`image.ts`: canvas re-encode, 2560 px cap), `png.ts` chunk
   whitelist (no metadata ever stored), repository (images are sealed vault bytes, metadata separate),
   `EvidencePanel.tsx`. Use `vault.put(…, bytes)` / `vault.getBytes` for binary content.
+  Redaction/crop: pure pixel ops in `edits.ts`, UI in `RedactionEditor.tsx` (apply → review →
+  replace; the original is kept until the user confirms).
 - `src/findings/pendingSaves.ts`: wrap every async save in `trackSave()`; readers call `whenSaved()`.
 - `src/settings/`: Settings panels. `src/ui/router.ts`: hash router (`matchRoute`: `#/findings`,
   `#/findings/<id>`, `#/cvss`, `#/settings`).

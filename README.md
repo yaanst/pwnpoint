@@ -13,6 +13,11 @@ image is re-encoded through a canvas, which removes EXIF/GPS data, comments and 
 piece of metadata, and only the image data chunks are kept in the stored PNG. Images wider than
 2560 px are downscaled. SVG files are refused. Images are stored encrypted like everything else.
 
+To hide secrets, open **Redact / crop** on a screenshot: draw black boxes or pixelated areas
+(with the mouse or by entering coordinates) and crop. **Apply** shows the flattened result; the
+original is only replaced when you confirm, and the hidden pixels are gone for good. Prefer black
+boxes for passwords, tokens and keys: pixelated text can sometimes be reconstructed.
+
 ## Privacy model
 
 PwnPoint is built for confidential client data:
