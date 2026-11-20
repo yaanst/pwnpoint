@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { createDebouncer } from '../ui/debounce';
+import { trackSave } from './pendingSaves';
 
 export type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error';
 
@@ -19,7 +20,7 @@ export function useAutosave<T>(value: T, save: (value: T) => Promise<unknown>, d
     () =>
       createDebouncer(() => {
         setStatus('saving');
-        save(latest.current).then(
+        trackSave(save(latest.current)).then(
           () => setStatus((s) => (s === 'saving' ? 'saved' : s)),
           () => setStatus('error'),
         );
@@ -57,5 +58,9 @@ export function useAutosave<T>(value: T, save: (value: T) => Promise<unknown>, d
     };
   }, [debouncer]);
 
-  return status;
+  return {
+    status,
+    /** Drops any pending save, e.g. before deleting the record. */
+    cancel: () => debouncer.cancel(),
+  };
 }
