@@ -3,9 +3,20 @@
 Turn a pentest finding (CVSS 3.1 score + screenshot evidence) into a client-ready slide, and
 chain findings into full compromise scenarios shown as a flow on one slide.
 
-> **Status:** early development. Working today: projects and findings (editor, list, filters),
-> CVSS 3.1 scoring, evidence screenshots with redaction, a live slide preview with a custom
-> theme, export to PowerPoint, PNG and Markdown, and attack scenarios. Backups are coming next.
+> **Status:** v0.2. Projects and findings (editor, list, filters), CVSS 3.1 base and
+> environmental scoring, evidence screenshots with redaction, a live slide preview with a custom
+> theme, export to PowerPoint, PNG and Markdown, attack scenarios (straight or branching),
+> encrypted mission files and backups, light and dark mode.
+
+## CVSS 3.1
+
+Each finding is scored with the CVSS 3.1 base metrics (or a pasted vector string). The
+optional **environmental metrics** describe the client's own context: how much confidentiality,
+integrity and availability matter for the asset, and base metrics that differ in their
+environment (e.g. a service only reachable internally). By default the base score is used; once
+any environmental metric is set, the environmental score replaces it for the severity, the sort
+order, the slide (labelled "CVSS 3.1 environmental") and Markdown, with the full vector.
+Temporal metrics are not supported.
 
 ## Evidence screenshots
 
@@ -59,6 +70,15 @@ step text is reduced down to the theme's minimum font size, then the flow is spl
 boundary onto a second slide with "continued" markers. A scenario never takes more than two
 slides: beyond that, slide exports are blocked until it is shortened. Scenarios export to
 `.pptx` (native shapes and arrows), PNG and Markdown, and are added to the project deck.
+
+### Branching scenarios
+
+A step can lead to several later steps (**Leads to**, under each step): use it to show
+alternative routes to the same goal, e.g. phishing or an exposed RDP server, both ending in
+domain admin. By default each step leads to the next one, and a step that leads nowhere
+reaches the goal. Links only go forward, so there are no loops. A branching scenario is drawn
+left to right on one slide; PwnPoint warns when a step marked as a chain breaker can be
+bypassed by another route.
 
 ## Mission files and backups
 
