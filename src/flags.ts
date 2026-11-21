@@ -4,10 +4,10 @@
  * the feature is complete.
  */
 export const flags = {
-  /** CVSS 3.1 temporal and environmental metrics (milestone 7). */
-  cvssAdvanced: false,
-  /** Branching attack scenarios, i.e. small DAGs (milestone 7). */
-  scenarioBranches: false,
+  /** CVSS 3.1 environmental metrics and score (on since v0.2.0). */
+  cvssAdvanced: true,
+  /** Branching attack scenarios: alternative paths (on since v0.2.0). */
+  scenarioBranches: true,
 } as const satisfies Record<string, boolean>;
 
 export type Flag = keyof typeof flags;

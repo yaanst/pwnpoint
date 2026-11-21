@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { flags, isEnabled } from './flags';
 
 describe('flags', () => {
-  it('ships unfinished features disabled', () => {
-    expect(isEnabled('cvssAdvanced')).toBe(false);
-    expect(isEnabled('scenarioBranches')).toBe(false);
+  it('ships the finished features enabled (v0.2.0)', () => {
+    expect(isEnabled('cvssAdvanced')).toBe(true);
+    expect(isEnabled('scenarioBranches')).toBe(true);
   });
 
   it('only holds booleans', () => {
