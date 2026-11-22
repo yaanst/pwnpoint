@@ -93,6 +93,9 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.getByRole('link', { name: '← Findings' }).click();
     await expect(page.getByTestId('row-VLN.01')).toBeVisible();
     await audit(page, 'findings list');
+    await page.getByRole('button', { name: 'Categories…' }).click();
+    await audit(page, 'categories dialog');
+    await page.getByRole('button', { name: 'Close' }).click();
     await page.getByRole('button', { name: 'Save mission file…' }).click();
     await audit(page, 'save mission dialog');
     await page.getByRole('button', { name: 'Cancel' }).click();

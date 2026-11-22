@@ -3,7 +3,9 @@ import { openDB } from 'idb';
 import { describe, expect, it } from 'vitest';
 import { DB_VERSION, type PwnPointDB } from '../storage/schema';
 import { Vault } from '../storage/vault';
+import { findingRef } from './model';
 import {
+  addCategory,
   createFinding,
   createProject,
   deleteFinding,
@@ -11,6 +13,8 @@ import {
   getFinding,
   listFindings,
   listProjects,
+  recategorize,
+  removeCategory,
   renameProject,
   saveFinding,
 } from './repository';
@@ -61,6 +65,59 @@ describe('finding repository', () => {
     const p = await createProject(vault, 'Old');
     await renameProject(vault, p, 'New');
     expect((await listProjects(vault)).map((x) => x.name)).toEqual(['New']);
+    vault.close();
+  });
+
+  it('numbers each category on its own', async () => {
+    const { vault } = await readyVault();
+    const p = await createProject(vault, 'P');
+    const refs = [];
+    for (const cat of [undefined, 'NET', 'PHY', 'NET', undefined]) {
+      refs.push(findingRef(await createFinding(vault, p.id, 1, cat)));
+    }
+    expect(refs).toEqual(['VLN.01', 'VLN.NET.01', 'VLN.PHY.01', 'VLN.NET.02', 'VLN.02']);
+    const net2 = (await listFindings(vault, p.id)).find((f) => findingRef(f) === 'VLN.NET.02');
+    if (!net2) throw new Error('missing');
+    expect(findingRef(await duplicateFinding(vault, net2))).toBe('VLN.NET.03');
+    vault.close();
+  });
+
+  it('gives a moved finding the next number of its new category, or its old one back', async () => {
+    const { vault } = await readyVault();
+    const p = await createProject(vault, 'P');
+    const f = await createFinding(vault, p.id); // VLN.01
+    await createFinding(vault, p.id, 1, 'NET'); // VLN.NET.01
+    const moved = await recategorize(vault, f, 'NET', f);
+    expect(findingRef(moved)).toBe('VLN.NET.02');
+    expect(await recategorize(vault, f, undefined, f)).toEqual({ number: 1 });
+    // VLN.NET.02 was handed out: it is not reused.
+    expect(findingRef(await createFinding(vault, p.id, 1, 'NET'))).toBe('VLN.NET.03');
+    const other = await recategorize(vault, f, 'PHY', f);
+    expect(findingRef(other)).toBe('VLN.PHY.01');
+    vault.close();
+  });
+
+  it("adds and removes the project's own categories", async () => {
+    const { vault } = await readyVault();
+    const p = await createProject(vault, 'P');
+    const added = await addCategory(vault, p.id, { code: ' cloud ', name: ' Cloud ' });
+    expect(added.categories).toEqual([{ code: 'CLOUD', name: 'Cloud' }]);
+    await expect(addCategory(vault, p.id, { code: 'CLOUD', name: 'x' })).rejects.toThrow(
+      /already exists/,
+    );
+    await expect(addCategory(vault, p.id, { code: 'NET', name: 'x' })).rejects.toThrow(
+      /already exists/,
+    );
+    await expect(addCategory(vault, p.id, { code: 'VLN', name: 'x' })).rejects.toThrow(/reserved/);
+    await expect(addCategory(vault, p.id, { code: 'A', name: 'x' })).rejects.toThrow(/2 to 6/);
+
+    const f = await createFinding(vault, p.id, 1, 'CLOUD');
+    await expect(removeCategory(vault, p.id, 'CLOUD')).rejects.toThrow(/use CLOUD/);
+    await deleteFinding(vault, f.id);
+    expect((await removeCategory(vault, p.id, 'CLOUD')).categories).toEqual([]);
+    // Added again later: the counter was kept, VLN.CLOUD.01 is not reused.
+    await addCategory(vault, p.id, { code: 'CLOUD', name: 'Cloud' });
+    expect(findingRef(await createFinding(vault, p.id, 1, 'CLOUD'))).toBe('VLN.CLOUD.02');
     vault.close();
   });
 

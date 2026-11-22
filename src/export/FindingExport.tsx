@@ -30,10 +30,7 @@ export function FindingExport({
 }) {
   const [busy, setBusy] = useState<Action | null>(null);
   const [status, setStatus] = useState('');
-  const baseName = safeFileName(
-    `${findingRef(finding.number)}-${finding.title}`,
-    findingRef(finding.number),
-  );
+  const baseName = safeFileName(`${findingRef(finding)}-${finding.title}`, findingRef(finding));
 
   const run = async (action: Action) => {
     setBusy(action);
@@ -45,7 +42,7 @@ export function FindingExport({
       const note = slide.warnings.length ? ' Some text does not fit: see the warnings above.' : '';
       if (action === 'pptx') {
         const bytes = buildPptx(bundle.slides, bundle.images, {
-          title: `${findingRef(finding.number)} ${finding.title}`.trim(),
+          title: `${findingRef(finding)} ${finding.title}`.trim(),
           lang: langTag(theme),
           headingFont: theme.headingFont,
           bodyFont: theme.bodyFont,

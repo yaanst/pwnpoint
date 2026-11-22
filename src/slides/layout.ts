@@ -225,7 +225,7 @@ export function buildFindingSlide(
   const badgeW = 2.1;
   elements.push(
     textBox(
-      [{ runs: [{ text: findingRef(finding.number) }] }],
+      [{ runs: [{ text: findingRef(finding) }] }],
       {
         role: 'ref',
         x: MARGIN,

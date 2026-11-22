@@ -6,7 +6,7 @@ export function DeleteFindingDialog(props: {
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const ref = findingRef(props.finding.number);
+  const ref = findingRef(props.finding);
   return (
     <ConfirmDialog
       title={`Delete ${ref}?`}

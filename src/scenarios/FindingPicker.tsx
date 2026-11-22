@@ -79,7 +79,7 @@ export function FindingPicker({
                   pick(f);
                 }}
               >
-                <span class="ref">{findingRef(f.number)}</span> {f.title || 'Untitled finding'}{' '}
+                <span class="ref">{findingRef(f)}</span> {f.title || 'Untitled finding'}{' '}
                 <span class={`badge sev-${effectiveSeverity(f).toLowerCase()}`}>
                   {effectiveSeverity(f)}
                 </span>

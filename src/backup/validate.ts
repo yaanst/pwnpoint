@@ -2,6 +2,13 @@ import { ENV_METRICS, ENV_ORDER, type EnvMetrics } from '../cvss/environmental';
 import { BASE_METRICS, type BaseMetrics, METRIC_ORDER, type Severity } from '../cvss/cvss31';
 import type { Evidence } from '../evidence/repository';
 import {
+  allCategories,
+  CATEGORY_CODE,
+  type Category,
+  DEFAULT_CATEGORIES,
+  MAX_CATEGORY_NAME,
+} from '../findings/categories';
+import {
   type Finding,
   type FindingStatus,
   type Project,
@@ -19,13 +26,16 @@ import type { SlideTheme } from '../slides/theme';
  */
 
 export const MISSION_FORMAT = 'pwnpoint-mission';
-export const MISSION_VERSION = 1;
+/** Version written. 2 added finding categories; version 1 files are still read. */
+export const MISSION_VERSION = 2;
+export const READABLE_VERSIONS: readonly unknown[] = [1, 2];
 
 export const LIMITS = {
   projects: 1_000,
   findings: 20_000,
   evidence: 20_000,
   scenarios: 5_000,
+  categories: 100,
   steps: 200,
   listItems: 1_000,
   shortText: 1_000,
@@ -135,7 +145,39 @@ function project(c: Checker, v: unknown, i: number): Project {
   if (o.nextScenarioNumber !== undefined) {
     p.nextScenarioNumber = c.int(o.nextScenarioNumber, `${where} scenario counter`, 1);
   }
+  if (o.categories !== undefined) {
+    const codes = new Set(DEFAULT_CATEGORIES.map((x) => x.code));
+    p.categories = c
+      .list(o.categories, `${where} categories`, LIMITS.categories)
+      .map((v, j): Category => {
+        const w = `${where} category ${j + 1}`;
+        const cat = c.obj(v, w);
+        const code = categoryCode(c, cat.code, w);
+        if (codes.has(code)) c.fail(`${w} uses the code ${code} twice.`);
+        codes.add(code);
+        return { code, name: c.str(cat.name, `${w} name`, MAX_CATEGORY_NAME).trim() || code };
+      });
+  }
+  if (o.categoryCounters !== undefined) {
+    const counters = c.obj(o.categoryCounters, `${where} category counters`);
+    const entries = Object.entries(counters);
+    if (entries.length > LIMITS.categories * 2) c.fail(`${where} has too many category counters.`);
+    p.categoryCounters = Object.fromEntries(
+      entries
+        .slice(0, LIMITS.categories * 2)
+        .map(([k, v]) => [
+          categoryCode(c, k, `${where} category counter`),
+          c.int(v, `${where} counter of ${k}`, 1),
+        ]),
+    );
+  }
   return p;
+}
+
+function categoryCode(c: Checker, v: unknown, where: string): string {
+  if (typeof v === 'string' && CATEGORY_CODE.test(v)) return v;
+  c.fail(`${where} has an invalid category code.`);
+  return '';
 }
 
 function cvss(c: Checker, v: unknown, where: string): BaseMetrics {
@@ -167,6 +209,7 @@ function finding(c: Checker, v: unknown, i: number): Finding {
     createdAt: c.time(o.createdAt, where),
     updatedAt: c.time(o.updatedAt, where),
   };
+  if (o.category !== undefined) f.category = categoryCode(c, o.category, where);
   if (o.cvssEnv !== undefined) {
     const e = c.obj(o.cvssEnv, `${where} environmental metrics`);
     const env: Record<string, string> = {};
@@ -256,7 +299,7 @@ export function validateMission(
   if (!isObj(data) || data.format !== MISSION_FORMAT) {
     return { ok: false, errors: ['This is not a PwnPoint mission file.'] };
   }
-  if (data.version !== MISSION_VERSION) {
+  if (!READABLE_VERSIONS.includes(data.version)) {
     return {
       ok: false,
       errors: ['This mission file was made by a newer version of PwnPoint. Update PwnPoint first.'],
@@ -291,8 +334,13 @@ export function validateMission(
 
   const projectIds = new Set(projects.map((p) => p.id));
   const findingById = new Map(findings.map((f) => [f.id, f]));
+  const projectById = new Map(projects.map((p) => [p.id, p]));
   findings.forEach((f, i) => {
-    if (!projectIds.has(f.projectId)) c.fail(`Finding ${i + 1} belongs to no project in the file.`);
+    const owner = projectById.get(f.projectId);
+    if (!owner) c.fail(`Finding ${i + 1} belongs to no project in the file.`);
+    else if (f.category && !allCategories(owner.categories).some((x) => x.code === f.category)) {
+      c.fail(`Finding ${i + 1} uses the category ${f.category}, which its project does not have.`);
+    }
   });
   scenarios.forEach((s, i) => {
     if (!projectIds.has(s.projectId))
@@ -329,14 +377,20 @@ export function validateMission(
       const own = findings.filter((f) => f.projectId === p.id);
       const ownScenarios = scenarios.filter((s) => s.projectId === p.id);
       // Counters must stay ahead of every number in use, or numbers would be handed out twice.
-      const maxFinding = Math.max(0, ...own.map((f) => f.number));
+      const maxFinding = Math.max(0, ...own.filter((f) => !f.category).map((f) => f.number));
       const maxScenario = Math.max(0, ...ownScenarios.map((s) => s.number));
+      const counters: Record<string, number> = { ...p.categoryCounters };
+      for (const f of own) {
+        if (f.category) counters[f.category] = Math.max(counters[f.category] ?? 1, f.number + 1);
+      }
+      const project: Project = {
+        ...p,
+        nextFindingNumber: Math.max(p.nextFindingNumber, maxFinding + 1),
+        nextScenarioNumber: Math.max(p.nextScenarioNumber ?? 1, maxScenario + 1),
+      };
+      if (Object.keys(counters).length) project.categoryCounters = counters;
       return {
-        project: {
-          ...p,
-          nextFindingNumber: Math.max(p.nextFindingNumber, maxFinding + 1),
-          nextScenarioNumber: Math.max(p.nextScenarioNumber ?? 1, maxScenario + 1),
-        },
+        project,
         findings: own,
         evidence: withBytes.filter((e) => e.meta.projectId === p.id),
         scenarios: ownScenarios,

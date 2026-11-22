@@ -8,6 +8,22 @@ chain findings into full compromise scenarios shown as a flow on one slide.
 > theme, export to PowerPoint, PNG and Markdown, attack scenarios (straight or branching),
 > encrypted mission files and backups, light and dark mode.
 
+## Finding numbers and categories
+
+Findings are numbered `VLN.01`, `VLN.02`… per project. A finding can also have a **category**,
+which adds its code to the reference: `VLN.NET.01`, `VLN.PHY.01`. Each category is numbered on
+its own, and findings without a category keep `VLN.NN`. Categories can be mixed in one project.
+
+- Built-in codes: `PHY` physical, `NET` network (LAN, WAN, Wi-Fi), `WEB` web applications and
+  websites, `APP` applications, `AD` Active Directory, `SYS` systems and services, `WIN` Windows,
+  `LIN` Linux. **Categories…** (Findings page) adds a project's own codes (2 to 6 capital letters
+  or digits) and removes unused ones.
+- Pick the category before **+ New finding**, or change it in the editor. Changing it gives the
+  finding the next number in the new category; switching back before leaving the editor gives
+  its old number back.
+- Numbers are never reused, even after a delete or a change of category, so references in
+  reports already sent stay valid.
+
 ## CVSS 3.1
 
 Each finding is scored with the CVSS 3.1 base metrics (or a pasted vector string). The
@@ -92,6 +108,8 @@ Browser storage is not a backup. Save your work to `.pwnp` files:
 - **Open mission file…** (Findings) or **Restore from a file…** (Settings) imports a file. You
   see what it contains first. If a project already exists, keep both (the file is imported as a
   copy) or replace it with the file's version.
+- Files saved by this version (format 2, with categories) need PwnPoint 0.3 or later; files
+  saved by 0.2 still open.
 - Import is strict: the file is a plain ZIP (`pwnpoint.json`, `data.json`, `images/*.png`, or
   an encrypted `payload.bin`), every record is validated field by field, nothing in it is ever
   run, and every screenshot is re-encoded through a canvas.
