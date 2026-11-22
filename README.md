@@ -3,10 +3,10 @@
 Turn a pentest finding (CVSS 3.1 score + screenshot evidence) into a client-ready slide, and
 chain findings into full compromise scenarios shown as a flow on one slide.
 
-> **Status:** v0.2. Projects and findings (editor, list, filters), CVSS 3.1 base and
-> environmental scoring, evidence screenshots with redaction, a live slide preview with a custom
-> theme, export to PowerPoint, PNG and Markdown, attack scenarios (straight or branching),
-> encrypted mission files and backups, light and dark mode.
+> **Status:** v0.3. Projects and findings (editor, list, filters, optional categories such as
+> `VLN.NET.01`), CVSS 3.1 base and environmental scoring, evidence screenshots with redaction, a
+> live slide preview with a custom theme, export to PowerPoint, PNG and Markdown, attack
+> scenarios (straight or branching), encrypted mission files and backups, light and dark mode.
 
 ## Finding numbers and categories
 
