@@ -13,6 +13,7 @@ import {
   MISSION_FORMAT,
   MISSION_VERSION,
   type MissionContent,
+  READABLE_VERSIONS,
   validateMission,
 } from './validate';
 
@@ -34,7 +35,8 @@ export const MISSION_MIME = 'application/octet-stream';
 export const MAX_MISSION_BYTES = 1024 * 1024 * 1024;
 /** Upper bound on PBKDF2 iterations accepted from a file, so a crafted file cannot hang the tab. */
 const MAX_ITERATIONS = 10_000_000;
-const AAD = `${MISSION_FORMAT}/${MISSION_VERSION}`;
+/** Binds the ciphertext to the format and version written in the manifest. */
+const aad = (version: unknown) => `${MISSION_FORMAT}/${String(version)}`;
 const MANIFEST = 'pwnpoint.json';
 const DATA = 'data.json';
 const PAYLOAD = 'payload.bin';
@@ -81,7 +83,7 @@ export async function buildMissionFile(
   const sealed = await encryptWithPassphrase(
     zip(inner),
     options.passphrase,
-    AAD,
+    aad(MISSION_VERSION),
     options.iterations ?? PBKDF2_ITERATIONS,
   );
   const params = {
@@ -167,7 +169,7 @@ export function openMissionFile(bytes: Uint8Array): OpenedMission {
   if (!isObj(m) || m.format !== MISSION_FORMAT) {
     return error('This is not a PwnPoint mission file.');
   }
-  if (m.version !== MISSION_VERSION) {
+  if (!READABLE_VERSIONS.includes(m.version)) {
     return error(
       'This mission file was made by a newer version of PwnPoint. Update PwnPoint first.',
     );
@@ -180,7 +182,7 @@ export function openMissionFile(bytes: Uint8Array): OpenedMission {
   const open = async (passphrase: string): Promise<OpenedMission> => {
     let inner: Uint8Array;
     try {
-      inner = await decryptWithPassphrase(sealed, passphrase, AAD);
+      inner = await decryptWithPassphrase(sealed, passphrase, aad(m.version));
     } catch {
       return error('Wrong passphrase, or the file was modified.');
     }

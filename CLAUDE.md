@@ -85,8 +85,10 @@ when behaviour changes.
   e2e tests start with `openWithNewVault(page)` from the fixtures.
 - `src/text/markdownLite.ts`: the only free-text formatting (bold, code, bullets) → a tree, never
   HTML. Render it with `<MarkdownLite>`. ESLint bans `dangerouslySetInnerHTML`, `innerHTML` & co.
-- `src/findings/`: finding model (`VLN.NN` refs, effective severity, filters) and repository on
-  the vault. Finding numbers come from a per-project counter and are never reused.
+- `src/findings/`: finding model (`VLN.NN` / `VLN.NET.NN` refs via `findingRef(finding)`, effective
+  severity, filters) and repository on the vault. Numbers come from per-project counters, one per
+  category (`categories.ts`: built-in codes + `Project.categories`), and are never reused.
+  `CategoriesDialog.tsx` manages a project's own codes.
 - `src/findings/FindingsPage.tsx`, `FindingEditor.tsx`: project picker, list, editor (autosave via
   `useAutosave`). Shared form fields live in `src/ui/fields.tsx`.
 - `src/evidence/`: screenshot import (`image.ts`: canvas re-encode, 2560 px cap), `png.ts` chunk
@@ -110,7 +112,7 @@ when behaviour changes.
   Branching (`scenarioBranches` flag): `graph.ts` (pure: `step.next` links, forward only so no loops;
   no link = the next step, empty = the goal; columns by longest path, `canBypass` for chain
   breakers). The graph is drawn on one slide left to right; links that skip columns go round.
-- `src/backup/`: mission files (`.pwnp`). `mission.ts` (stored ZIP; plain or AES-GCM payload under a
+- `src/backup/`: mission files (`.pwnp`, format version 2; version 1 still read). `mission.ts` (stored ZIP; plain or AES-GCM payload under a
   PBKDF2 key, `encryptWithPassphrase` in `crypto.ts`), `validate.ts` (strict field-by-field rebuild,
   limits, cross-references; never trust the file), `repository.ts` (collect, restore with replace /
   copy, re-encode every image before writing), `files.ts` (native save dialog or download),

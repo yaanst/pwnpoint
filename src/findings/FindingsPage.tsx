@@ -8,6 +8,8 @@ import { rememberedProject, rememberProject } from '../ui/currentProject';
 import { EmptyState } from '../ui/EmptyState';
 import { OnboardingTip } from '../ui/OnboardingTip';
 import { findingHref } from '../ui/router';
+import { allCategories, type Category } from './categories';
+import { CategoriesDialog } from './CategoriesDialog';
 import { DeleteFindingDialog } from './DeleteFindingDialog';
 import { whenSaved } from './pendingSaves';
 import {
@@ -18,6 +20,7 @@ import {
   type FindingFilter,
   findingRef,
   type FindingStatus,
+  NO_CATEGORY,
   type Project,
   SEVERITIES,
   sortForReport,
@@ -41,6 +44,8 @@ export function FindingsPage({ vault }: { vault: Vault }) {
   const [toDelete, setToDelete] = useState<Finding | null>(null);
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+  const [editCategories, setEditCategories] = useState(false);
 
   const reload = async (id: string | null = projectId) => {
     await whenSaved(); // e.g. the editor's last autosave when coming back to the list
@@ -62,25 +67,26 @@ export function FindingsPage({ vault }: { vault: Vault }) {
   if (!projects) return <p aria-busy="true">Loading…</p>;
   const project = projects.find((p) => p.id === projectId) ?? null;
   const shown = filterFindings(findings, filter);
-  const filtered = !!(filter.severity || filter.status || filter.text?.trim());
+  const filtered = !!(filter.severity || filter.status || filter.category || filter.text?.trim());
+  const categories = allCategories(project?.categories);
 
   const addFinding = async () => {
     if (!projectId) return;
-    const f = await createFinding(vault, projectId);
+    const f = await createFinding(vault, projectId, Date.now(), newCategory || undefined);
     location.hash = findingHref(f.id);
   };
 
   const duplicate = async (f: Finding) => {
     const copy = await duplicateFinding(vault, f);
     await reload();
-    setMessage(`${findingRef(f.number)} duplicated as ${findingRef(copy.number)}.`);
+    setMessage(`${findingRef(f)} duplicated as ${findingRef(copy)}.`);
   };
 
   const remove = async (f: Finding) => {
     setToDelete(null);
     await deleteFinding(vault, f.id);
     await reload();
-    setMessage(`${findingRef(f.number)} deleted.`);
+    setMessage(`${findingRef(f)} deleted.`);
   };
 
   return (
@@ -98,6 +104,8 @@ export function FindingsPage({ vault }: { vault: Vault }) {
                 onChange={(e) => {
                   setProjectId(e.currentTarget.value);
                   setMessage('');
+                  setNewCategory('');
+                  setFilter({});
                 }}
               >
                 {projects.map((p) => (
@@ -148,10 +156,32 @@ export function FindingsPage({ vault }: { vault: Vault }) {
         ) : (
           <>
             <div class="row toolbar">
-              <button type="button" class="primary" onClick={() => void addFinding()}>
-                + New finding
-              </button>
-              <Filters filter={filter} onChange={setFilter} />
+              <div class="row">
+                <label for="new-category">Category for new findings</label>
+                <select
+                  id="new-category"
+                  value={newCategory}
+                  aria-describedby="new-category-ref"
+                  onChange={(e) => setNewCategory(e.currentTarget.value)}
+                >
+                  <option value="">None</option>
+                  {categories.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.code}: {c.name}
+                    </option>
+                  ))}
+                </select>
+                <span id="new-category-ref" class="visually-hidden">
+                  New findings are numbered {newCategory ? `VLN.${newCategory}.NN` : 'VLN.NN'}
+                </span>
+                <button type="button" class="primary" onClick={() => void addFinding()}>
+                  + New finding
+                </button>
+                <button type="button" class="small" onClick={() => setEditCategories(true)}>
+                  Categories…
+                </button>
+              </div>
+              <Filters filter={filter} categories={categories} onChange={setFilter} />
               <button type="button" onClick={() => setSaving(true)}>
                 Save mission file…
               </button>
@@ -205,6 +235,23 @@ export function FindingsPage({ vault }: { vault: Vault }) {
           />
         )}
 
+        {editCategories && project && (
+          <CategoriesDialog
+            vault={vault}
+            project={project}
+            findings={findings}
+            onChange={(next) => {
+              setProjects(projects.map((p) => (p.id === next.id ? next : p)));
+              const codes = allCategories(next.categories).map((c) => c.code);
+              if (newCategory && !codes.includes(newCategory)) setNewCategory('');
+              if (filter.category && filter.category !== NO_CATEGORY) {
+                if (!codes.includes(filter.category)) setFilter({ ...filter, category: '' });
+              }
+            }}
+            onClose={() => setEditCategories(false)}
+          />
+        )}
+
         {toDelete && (
           <DeleteFindingDialog
             finding={toDelete}
@@ -219,17 +266,20 @@ export function FindingsPage({ vault }: { vault: Vault }) {
 
 function Filters({
   filter,
+  categories,
   onChange,
 }: {
   filter: FindingFilter;
+  categories: Category[];
   onChange: (f: FindingFilter) => void;
 }) {
-  const set = (patch: { text?: string; severity?: string; status?: string }) => {
+  const set = (patch: { text?: string; severity?: string; status?: string; category?: string }) => {
     const merged = { ...filter, ...patch };
     const next: FindingFilter = {};
     if (merged.text) next.text = merged.text;
     if (merged.severity) next.severity = merged.severity as Severity;
     if (merged.status) next.status = merged.status as FindingStatus;
+    if (merged.category) next.category = merged.category;
     onChange(next);
   };
   return (
@@ -238,7 +288,7 @@ function Filters({
       <input
         id="filter-text"
         type="search"
-        placeholder="VLN.03, title, asset…"
+        placeholder="VLN.NET.03, title, asset…"
         value={filter.text ?? ''}
         onInput={(e) => set({ text: e.currentTarget.value })}
       />
@@ -252,6 +302,20 @@ function Filters({
         {SEVERITIES.map((s) => (
           <option key={s} value={s}>
             {s}
+          </option>
+        ))}
+      </select>
+      <label for="filter-category">Category</label>
+      <select
+        id="filter-category"
+        value={filter.category ?? ''}
+        onChange={(e) => set({ category: e.currentTarget.value })}
+      >
+        <option value="">All</option>
+        <option value={NO_CATEGORY}>None</option>
+        {categories.map((c) => (
+          <option key={c.code} value={c.code}>
+            {c.code}
           </option>
         ))}
       </select>
@@ -294,7 +358,7 @@ function FindingTable(props: {
       <tbody>
         {props.findings.map((f) => {
           const severity = effectiveSeverity(f);
-          const ref = findingRef(f.number);
+          const ref = findingRef(f);
           return (
             <tr key={f.id} data-testid={`row-${ref}`}>
               <td class="ref">{ref}</td>

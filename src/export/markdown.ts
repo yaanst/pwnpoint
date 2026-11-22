@@ -27,7 +27,7 @@ export function findingMarkdown(
   const label = cvss.kind === 'environmental' ? L.cvssEnvironmental : L.cvss;
   const title = (f.title.trim() || L.untitled).replace(/\n+/g, ' ');
   const lines = [
-    `${'#'.repeat(headingLevel)} ${findingRef(f.number)} ${title}`,
+    `${'#'.repeat(headingLevel)} ${findingRef(f)} ${title}`,
     '',
     `**${L.severityLabel}:** ${L.severity[severity]} (${label} ${score}, \`${cvss.vector}\`)`,
   ];

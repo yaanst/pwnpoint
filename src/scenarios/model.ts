@@ -104,7 +104,7 @@ export function stepView(step: ScenarioStep, findings: Map<string, Finding>): St
   const f = step.findingId ? findings.get(step.findingId) : undefined;
   if (!f) return { tag: '', title: '', missing: true, recommendation: '' };
   return {
-    tag: findingRef(f.number),
+    tag: findingRef(f),
     title: f.title.trim(),
     severity: effectiveSeverity(f),
     missing: false,
@@ -154,5 +154,5 @@ export function moveStep<T>(items: T[], from: number, to: number): T[] {
 export function searchFindings(findings: Finding[], query: string): Finding[] {
   const q = query.trim().toLowerCase();
   if (!q) return findings;
-  return findings.filter((f) => `${findingRef(f.number)} ${f.title}`.toLowerCase().includes(q));
+  return findings.filter((f) => `${findingRef(f)} ${f.title}`.toLowerCase().includes(q));
 }

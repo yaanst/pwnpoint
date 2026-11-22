@@ -14,10 +14,12 @@ import {
   type Finding,
   findingProblems,
   findingRef,
+  type Project,
   SEVERITIES,
 } from './model';
+import { allCategories, type Category } from './categories';
 import { DeleteFindingDialog } from './DeleteFindingDialog';
-import { deleteFinding, getFinding, saveFinding } from './repository';
+import { deleteFinding, getFinding, recategorize, saveFinding } from './repository';
 import { type SaveStatus, useAutosave } from './useAutosave';
 
 const SAVE_TEXT: Record<SaveStatus, string> = {
@@ -77,7 +79,7 @@ function FindingEditor({ vault, initial }: { vault: Vault; initial: Finding }) {
             </button>
           </p>
           <h2 id="finding-heading">
-            <span class="ref">{findingRef(f.number)}</span> {f.title || 'Untitled finding'}
+            <span class="ref">{findingRef(f)}</span> {f.title || 'Untitled finding'}
           </h2>
           <p class="row">
             <span class={`badge sev-${severity.toLowerCase()}`} data-testid="finding-severity">
@@ -100,6 +102,8 @@ function FindingEditor({ vault, initial }: { vault: Vault; initial: Finding }) {
             onInput={(e) => update({ title: e.currentTarget.value })}
           />
         </div>
+
+        <CategoryField vault={vault} finding={f} original={initial} onChange={setF} />
 
         <div class="field">
           <label for="f-status">Status</label>
@@ -253,6 +257,78 @@ function FindingEditor({ vault, initial }: { vault: Vault; initial: Finding }) {
       <aside class="editor-aside">
         <SlidePreview vault={vault} finding={f} />
       </aside>
+    </div>
+  );
+}
+
+/**
+ * The finding's category. Changing it renumbers the finding in the new category; going back to
+ * the category it had when the editor opened gives its old number back.
+ */
+function CategoryField(props: {
+  vault: Vault;
+  finding: Finding;
+  original: Finding;
+  onChange: (update: (prev: Finding) => Finding) => void;
+}) {
+  const { vault, finding, original } = props;
+  const [categories, setCategories] = useState<Category[]>(allCategories(undefined));
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  useEffect(() => {
+    void vault
+      .get<Project>('projects', finding.projectId)
+      .then((p) => setCategories(allCategories(p?.categories)));
+  }, [vault, finding.projectId]);
+
+  const change = async (code: string) => {
+    const before = findingRef(finding);
+    setBusy(true);
+    try {
+      const next = await recategorize(vault, finding, code || undefined, original);
+      props.onChange((prev) => {
+        const { category: _old, ...rest } = prev;
+        return { ...rest, ...next };
+      });
+      const after = findingRef(next);
+      setMessage(
+        after === findingRef(original)
+          ? `Back to ${after}.`
+          : `Renumbered ${before} → ${after}. ${before} will not be reused.`,
+      );
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'The category could not be changed.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div class="field">
+      <label for="f-category">Category</label>
+      <select
+        id="f-category"
+        value={finding.category ?? ''}
+        disabled={busy}
+        aria-describedby="f-category-hint"
+        onChange={(e) => void change(e.currentTarget.value)}
+      >
+        <option value="">None (VLN.NN)</option>
+        {categories.map((c) => (
+          <option key={c.code} value={c.code}>
+            {c.code}: {c.name}
+          </option>
+        ))}
+        {finding.category && !categories.some((c) => c.code === finding.category) && (
+          <option value={finding.category}>{finding.category}</option>
+        )}
+      </select>
+      <p id="f-category-hint" class="hint">
+        Changing the category gives the finding the next number in that category.
+      </p>
+      <p role="status" class="muted" data-testid="category-status">
+        {message}
+      </p>
     </div>
   );
 }

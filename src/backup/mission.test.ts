@@ -3,6 +3,7 @@ import { DEFAULT_THEME } from '../slides/theme';
 import { newScenario, findingStep, techniqueStep } from '../scenarios/model';
 import { newFinding } from '../findings/model';
 import { unzipStored, zip } from '../export/zip';
+import { encryptWithPassphrase } from '../storage/crypto';
 import { buildMissionFile, openMissionFile, type OpenedMission } from './mission';
 import { TINY_PNG } from './testing';
 import type { MissionContent } from './validate';
@@ -89,7 +90,7 @@ describe('mission file', () => {
     expect([...files.keys()]).toEqual(['pwnpoint.json', 'data.json', 'images/e1.png']);
     expect(JSON.parse(dec.decode(files.get('pwnpoint.json')))).toEqual({
       format: 'pwnpoint-mission',
-      version: 1,
+      version: 2,
       encrypted: false,
     });
     const content = ok(openMissionFile(file));
@@ -140,7 +141,7 @@ describe('mission file', () => {
       errors(openMissionFile(zip([{ name: 'pwnpoint.json', data: enc.encode('{}') }]))),
     ).toMatch(/not a PwnPoint mission file/);
     const newer = zip([
-      { name: 'pwnpoint.json', data: enc.encode('{"format":"pwnpoint-mission","version":2}') },
+      { name: 'pwnpoint.json', data: enc.encode('{"format":"pwnpoint-mission","version":3}') },
     ]);
     expect(errors(openMissionFile(newer))).toMatch(/newer version/);
   });
@@ -185,6 +186,82 @@ describe('mission file', () => {
     expect(p.project.nextFindingNumber).toBe(2);
     expect(Object.keys(p.project)).not.toContain('__proto__evil');
     expect(Object.keys(first(p.findings))).not.toContain('html');
+  });
+
+  it('keeps finding categories and moves each category counter past its numbers', async () => {
+    const file = await tampered((d) => {
+      const p = first(d.projects as Record<string, unknown>[]);
+      p.categories = [{ code: 'CLOUD', name: 'Cloud' }];
+      p.categoryCounters = { NET: 2 };
+      const f = first(d.findings as Record<string, unknown>[]);
+      f.category = 'NET';
+      f.number = 7;
+      (d.findings as unknown[]).push({ ...f, id: 'f2', category: 'CLOUD', number: 3 });
+    });
+    const p = first(ok(openMissionFile(file)).projects);
+    expect(p.project.categories).toEqual([{ code: 'CLOUD', name: 'Cloud' }]);
+    expect(p.project.categoryCounters).toEqual({ NET: 8, CLOUD: 4 });
+    expect(p.findings.map((f) => [f.category, f.number])).toEqual([
+      ['NET', 7],
+      ['CLOUD', 3],
+    ]);
+  });
+
+  it('refuses unknown or malformed categories', async () => {
+    const unknown = await tampered((d) => {
+      first(d.findings as Record<string, unknown>[]).category = 'CLOUD';
+    });
+    expect(errors(openMissionFile(unknown))).toMatch(/category CLOUD, which its project/);
+    const malformed = await tampered((d) => {
+      const p = first(d.projects as Record<string, unknown>[]);
+      p.categories = [
+        { code: 'net<script>', name: 'x' },
+        { code: 'NET', name: 'Dup' },
+      ];
+      p.categoryCounters = { 'bad key': 1 };
+      first(d.findings as Record<string, unknown>[]).category = 'n';
+    });
+    const text = errors(openMissionFile(malformed));
+    expect(text).toMatch(/Project 1 category 1 has an invalid category code/);
+    expect(text).toMatch(/uses the code NET twice/);
+    expect(text).toMatch(/category counter has an invalid category code/);
+    expect(text).toMatch(/Finding 1 has an invalid category code/);
+  });
+
+  it('still reads version 1 files, plain and encrypted', async () => {
+    const files = unzipStored(
+      await buildMissionFile(sample(), { passphrase: null, appVersion: 't' }),
+    );
+    const data = JSON.parse(dec.decode(files.get('data.json'))) as Record<string, unknown>;
+    data.version = 1;
+    const inner = [...files]
+      .filter(([name]) => name !== 'pwnpoint.json')
+      .map(([name, d]) => ({
+        name,
+        data: name === 'data.json' ? enc.encode(JSON.stringify(data)) : d,
+      }));
+    const manifest = (extra: object) =>
+      enc.encode(JSON.stringify({ format: 'pwnpoint-mission', version: 1, ...extra }));
+
+    const plain = zip([{ name: 'pwnpoint.json', data: manifest({ encrypted: false }) }, ...inner]);
+    expect(first(ok(openMissionFile(plain)).projects).project.name).toBe('ACME');
+
+    // As v0.2.0 wrote it: the ciphertext is bound to "pwnpoint-mission/1".
+    const sealed = await encryptWithPassphrase(zip(inner), 'pass phrase', 'pwnpoint-mission/1');
+    const encrypted = zip([
+      {
+        name: 'pwnpoint.json',
+        data: manifest({
+          encrypted: true,
+          kdf: { ...sealed.kdf, salt: btoa(String.fromCharCode(...sealed.kdf.salt)) },
+          cipher: { ...sealed.cipher, iv: btoa(String.fromCharCode(...sealed.cipher.iv)) },
+        }),
+      },
+      { name: 'payload.bin', data: sealed.data },
+    ]);
+    const opened = openMissionFile(encrypted);
+    if (opened.status !== 'needs-passphrase') throw new Error('expected a passphrase prompt');
+    expect(first(ok(await opened.open('pass phrase')).projects).project.name).toBe('ACME');
   });
 
   it('keeps valid environmental metrics and refuses invalid ones', async () => {
