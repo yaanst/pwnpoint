@@ -1,10 +1,7 @@
 import { canBypass, isLinear, successors } from './graph';
 import type { Severity } from '../cvss/cvss31';
 import { effectiveSeverity, type Finding, findingRef } from '../findings/model';
-
-/** Rating used for a scenario's impact and likelihood. */
-export type Level = 'Critical' | 'High' | 'Medium' | 'Low';
-export const LEVELS: readonly Level[] = ['Critical', 'High', 'Medium', 'Low'];
+import { LEGACY_LEVELS, isRating, type Rating } from './rating';
 
 export interface ScenarioStep {
   /** Stable id, so reordering keeps each step's editor state. */
@@ -38,10 +35,14 @@ export interface Scenario {
   /** Where the attacker starts, e.g. "Unauthenticated, on the office Wi-Fi". */
   start: string;
   goal: string;
-  /** Markdown-lite. */
+  /** Markdown-lite. Shown as the scenario's description. */
   context: string;
-  impact: Level;
-  likelihood: Level;
+  /** 1 Rare … 5 Very likely. Unset until the auditor rates the scenario. */
+  exploitability?: Rating;
+  exploitabilityRationale: string;
+  /** 1 Negligible … 5 Very significant. Unset until the auditor rates the scenario. */
+  impact?: Rating;
+  impactRationale: string;
   steps: ScenarioStep[];
   createdAt: number;
   updatedAt: number;
@@ -60,12 +61,36 @@ export function newScenario(id: string, projectId: string, number: number, now: 
     start: '',
     goal: '',
     context: '',
-    impact: 'High',
-    likelihood: 'Medium',
+    exploitabilityRationale: '',
+    impactRationale: '',
     steps: [],
     createdAt: now,
     updatedAt: now,
   };
+}
+
+/**
+ * A scenario as stored, brought up to date: scenarios saved before the 5-level scales had
+ * impact and likelihood on 4 levels (Critical … Low), mapped to 5 … 2.
+ */
+export function upgradeScenario(raw: Scenario): Scenario {
+  const old = raw as Scenario & { likelihood?: unknown; impact?: unknown };
+  const { likelihood, ...rest } = old;
+  const s: Scenario = {
+    ...rest,
+    exploitabilityRationale:
+      typeof old.exploitabilityRationale === 'string' ? old.exploitabilityRationale : '',
+    impactRationale: typeof old.impactRationale === 'string' ? old.impactRationale : '',
+  };
+  delete s.impact;
+  delete s.exploitability;
+  const impact = isRating(old.impact) ? old.impact : LEGACY_LEVELS[String(old.impact)];
+  const exploit = isRating(old.exploitability)
+    ? old.exploitability
+    : LEGACY_LEVELS[String(likelihood)];
+  if (impact) s.impact = impact;
+  if (exploit) s.exploitability = exploit;
+  return s;
 }
 
 export function findingStep(id: string, findingId: string): ScenarioStep {

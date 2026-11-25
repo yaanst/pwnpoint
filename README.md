@@ -71,7 +71,7 @@ warn when text does not fit on a slide.
 
 **Scenarios** chain findings into the path an attacker follows, shown as a flow on one slide.
 A scenario (`SCN.01`, numbered per project) has a title, a starting position, a goal, a
-context, an impact and a likelihood, and ordered steps. A step is a finding (pick it by typing
+context, a rating and ordered steps. A step is a finding (pick it by typing
 its reference or title) or a free technique with an optional MITRE ATT&CK id. Each step says
 what the attacker gains, can carry a note, and can be marked as a **chain breaker**: fixing it
 stops the attack. Chain breakers are listed under **Break the chain**, with the step's note or,
@@ -86,6 +86,36 @@ step text is reduced down to the theme's minimum font size, then the flow is spl
 boundary onto a second slide with "continued" markers. A scenario never takes more than two
 slides: beyond that, slide exports are blocked until it is shortened. Scenarios export to
 `.pptx` (native shapes and arrows), PNG and Markdown, and are added to the project deck.
+
+### Scenario rating
+
+A scenario is rated on two 5-level scales, each with an optional rationale:
+
+- **Exploitability:** 1 Rare, 2 Unlikely, 3 Possible, 4 Likely, 5 Very likely.
+- **Impact:** 1 Negligible, 2 Low, 3 Medium, 4 Significant, 5 Very significant.
+
+The **severity** (Minor, Moderate, Major, Severe) is read from the exploitability × impact
+matrix:
+
+| Exploitability ↓ / Impact → | Negligible | Low      | Medium   | Significant | Very significant |
+| --------------------------- | ---------- | -------- | -------- | ----------- | ---------------- |
+| Very likely                 | Moderate   | Major    | Major    | Severe      | Severe           |
+| Likely                      | Moderate   | Moderate | Major    | Severe      | Severe           |
+| Possible                    | Minor      | Moderate | Moderate | Major       | Severe           |
+| Unlikely                    | Minor      | Minor    | Moderate | Moderate    | Major            |
+| Rare                        | Minor      | Minor    | Moderate | Moderate    | Major            |
+
+PwnPoint **suggests** a rating from the scenario's findings, which you apply or ignore:
+
+- Each finding's exploitability comes from its CVSS exploitability sub-score, and its impact
+  from its CVSS impact sub-score, each cut into 5 bands. Modified (environmental) metrics are
+  used when they are set.
+- Along a path, the hardest step limits exploitability (minimum). With alternative paths, the
+  easiest path counts.
+- Impact is the highest impact among the findings.
+
+Scenarios rated before 0.4 on 4 levels are converted once: Critical → 5, High → 4, Medium → 3,
+Low → 2. Their likelihood becomes the exploitability.
 
 ### Branching scenarios
 
@@ -108,7 +138,7 @@ Browser storage is not a backup. Save your work to `.pwnp` files:
 - **Open mission file…** (Findings) or **Restore from a file…** (Settings) imports a file. You
   see what it contains first. If a project already exists, keep both (the file is imported as a
   copy) or replace it with the file's version.
-- Files saved by this version (format 2, with categories) need PwnPoint 0.3 or later; files
+- Files saved by this version (format 3, with scenario ratings) need PwnPoint 0.4 or later; files
   saved by 0.2 still open.
 - Import is strict: the file is a plain ZIP (`pwnpoint.json`, `data.json`, `images/*.png`, or
   an encrypted `payload.bin`), every record is validated field by field, nothing in it is ever

@@ -15,6 +15,7 @@ import { LABELS, type SlideTheme } from '../slides/theme';
 import { type FontSpec, type Measure, type TextRun, wrapRuns } from '../slides/wrap';
 import { columns, isLinear, successors } from './graph';
 import { type Scenario, scenarioRef, type ScenarioStep, stepView, type StepView } from './model';
+import { scenarioSeverity, SEVERITY_COLOURS } from './rating';
 
 /** A scenario never takes more than this many slides; beyond, export is blocked. */
 export const MAX_SCENARIO_SLIDES = 2;
@@ -375,32 +376,69 @@ function buildSlide(
   );
   elements.push(title);
   if (title.hiddenLines) warnings.push('The scenario title is too long for one line. Shorten it.');
+  // Severity pill, then exploitability and impact underneath.
+  const S = L.scenario;
+  const { exploitability, impact } = scenario;
+  const severity = exploitability && impact ? scenarioSeverity(exploitability, impact) : null;
+  const pill = severity
+    ? theme.severity[SEVERITY_COLOURS[severity]]
+    : { bg: c.muted, fg: c.background };
+  elements.push(
+    {
+      kind: 'rect',
+      x: RIGHT - pillW,
+      y: 0.35,
+      w: pillW,
+      h: pillH,
+      fill: pill.bg,
+      radius: pillH / 2,
+    },
+    textBox(
+      [
+        {
+          runs: [
+            { text: `${S.severity}: ` },
+            { text: severity ? S.levels.severity[severity] : S.notRated, bold: true },
+          ],
+        },
+      ],
+      {
+        role: 'pill',
+        x: RIGHT - pillW,
+        y: 0.35,
+        w: pillW,
+        h: pillH,
+        sizePt: smallPt + 1,
+        color: pill.fg,
+        align: 'center',
+        valign: 'middle',
+        ...fonts,
+      },
+      measure,
+    ),
+  );
   (
     [
-      [L.scenario.impact, L.scenario.levels.impact[scenario.impact], scenario.impact, 0.35],
       [
-        L.scenario.likelihood,
-        L.scenario.levels.likelihood[scenario.likelihood],
-        scenario.likelihood,
-        0.35 + pillH + 0.1,
+        S.exploitability,
+        scenario.exploitability && S.levels.exploitability[scenario.exploitability],
+        0.79,
       ],
+      [S.impact, scenario.impact && S.levels.impact[scenario.impact], 1.0],
     ] as const
-  ).forEach(([label, value, level, y]) => {
-    const sev = theme.severity[level];
+  ).forEach(([label, value, y]) => {
     elements.push(
-      { kind: 'rect', x: RIGHT - pillW, y, w: pillW, h: pillH, fill: sev.bg, radius: pillH / 2 },
       textBox(
-        [{ runs: [{ text: `${label}: ` }, { text: value, bold: true }] }],
+        [{ runs: [{ text: `${label}: ` }, { text: value || S.notRated, bold: true }] }],
         {
-          role: 'pill',
-          x: RIGHT - pillW,
+          role: 'rating',
+          x: RIGHT - pillW - 0.6,
           y,
-          w: pillW,
-          h: pillH,
-          sizePt: smallPt + 1,
-          color: sev.fg,
-          align: 'center',
-          valign: 'middle',
+          w: pillW + 0.6,
+          h: 0.22,
+          sizePt: smallPt,
+          color: c.muted,
+          align: 'right',
           ...fonts,
         },
         measure,

@@ -112,7 +112,9 @@ when behaviour changes.
   Branching (`scenarioBranches` flag): `graph.ts` (pure: `step.next` links, forward only so no loops;
   no link = the next step, empty = the goal; columns by longest path, `canBypass` for chain
   breakers). The graph is drawn on one slide left to right; links that skip columns go round.
-- `src/backup/`: mission files (`.pwnp`, format version 2; version 1 still read). `mission.ts` (stored ZIP; plain or AES-GCM payload under a
+  Rating: `rating.ts` (pure: 5-level exploitability and impact, severity matrix, suggestion from the
+  findings' CVSS sub-scores; `upgradeScenario` maps older 4-level ratings on read), `RatingFields.tsx`.
+- `src/backup/`: mission files (`.pwnp`, format version 3; versions 1–2 still read). `mission.ts` (stored ZIP; plain or AES-GCM payload under a
   PBKDF2 key, `encryptWithPassphrase` in `crypto.ts`), `validate.ts` (strict field-by-field rebuild,
   limits, cross-references; never trust the file), `repository.ts` (collect, restore with replace /
   copy, re-encode every image before writing), `files.ts` (native save dialog or download),

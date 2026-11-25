@@ -5,15 +5,8 @@ import { type SaveStatus, useAutosave } from '../findings/useAutosave';
 import type { Vault } from '../storage/vault';
 import { RichTextField } from '../ui/fields';
 import { FindingPicker } from './FindingPicker';
-import {
-  findingStep,
-  LEVELS,
-  type Level,
-  type Scenario,
-  scenarioProblems,
-  scenarioRef,
-  techniqueStep,
-} from './model';
+import { findingStep, type Scenario, scenarioProblems, scenarioRef, techniqueStep } from './model';
+import { RatingFields } from './RatingFields';
 import { deleteScenario, getScenario, newStepId, saveScenario } from './repository';
 import { DeleteScenarioDialog } from './ScenariosPage';
 import { ScenarioPreview } from './ScenarioPreview';
@@ -69,23 +62,6 @@ function ScenarioEditor({
   const problems = scenarioProblems(s, byId);
   const sorted = useMemo(() => [...findings].sort((a, b) => a.number - b.number), [findings]);
 
-  const level = (id: string, label: string, key: 'impact' | 'likelihood') => (
-    <div class="field">
-      <label for={id}>{label}</label>
-      <select
-        id={id}
-        value={s[key]}
-        onChange={(e) => update({ [key]: e.currentTarget.value as Level })}
-      >
-        {LEVELS.map((l) => (
-          <option key={l} value={l}>
-            {l}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-
   return (
     <div class="editor-layout">
       <article class="editor" aria-labelledby="scenario-heading">
@@ -134,10 +110,6 @@ function ScenarioEditor({
             onInput={(e) => update({ goal: e.currentTarget.value })}
           />
         </div>
-        <div class="row">
-          {level('s-impact', 'Impact', 'impact')}
-          {level('s-likelihood', 'Likelihood', 'likelihood')}
-        </div>
         <RichTextField
           id="s-context"
           label="Context"
@@ -175,6 +147,8 @@ function ScenarioEditor({
             </ul>
           )}
         </fieldset>
+
+        <RatingFields scenario={s} findings={byId} onChange={update} />
       </article>
       <aside class="editor-aside">
         <ScenarioPreview vault={vault} scenario={s} findings={findings} />
