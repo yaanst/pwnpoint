@@ -21,6 +21,8 @@ import {
   securitySentence,
   securityStatus,
 } from './mission';
+import { isEnabled } from '../flags';
+import { ReportExport } from './ReportExport';
 import { saveMission } from './repository';
 
 const SAVE_TEXT: Record<SaveStatus, string> = {
@@ -259,6 +261,9 @@ function MissionEditor(props: {
             ))}
           </ul>
         </div>
+      )}
+      {isEnabled('reportDeck') && (
+        <ReportExport vault={vault} project={{ ...project, mission: m }} scenarios={scenarios} />
       )}
     </div>
   );

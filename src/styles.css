@@ -1075,3 +1075,16 @@ input.mono {
 .plain-list li + li {
   margin-top: 0.25rem;
 }
+
+.report-thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.report-thumbs .slide-svg {
+  border: 1px solid var(--border, #c9ced6);
+}

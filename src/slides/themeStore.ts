@@ -1,26 +1,72 @@
 import type { Severity } from '../cvss/cvss31';
 import type { Vault } from '../storage/vault';
 import { base64ToBytes, bytesToBase64 } from '../util/base64';
-import { DEFAULT_THEME, HEX_COLOR, safeFontName, type SlideTheme } from './theme';
+import {
+  DEFAULT_REPORT_STYLE,
+  DEFAULT_THEME,
+  HEX_COLOR,
+  type ReportStyle,
+  safeFontName,
+  type SlideTheme,
+  type ThemeImage,
+} from './theme';
 
 const THEME_ID = 'active';
+/** Report images are stored as their own records, since a record holds one binary. */
+const IMAGE_IDS = { cover: 'active-cover', coverLogo: 'active-cover-logo' } as const;
 const SEVERITIES: Severity[] = ['Critical', 'High', 'Medium', 'Low', 'None'];
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const MAX_COVER_BYTES = 8 * 1024 * 1024;
 
-/** The active slide theme (logo bytes stored sealed next to it), or the default. */
+type Size = { width: number; height: number };
+type StoredStyle = Omit<ReportStyle, 'cover' | 'coverLogo'> & {
+  coverSize?: Size;
+  coverLogoSize?: Size;
+};
+type StoredTheme = Omit<SlideTheme, 'logo' | 'report'> & { logoSize?: Size; report?: StoredStyle };
+
+/** The active slide theme (images stored sealed next to it), or the default. */
 export async function loadTheme(vault: Vault): Promise<SlideTheme> {
-  const stored = await vault.get<
-    Omit<SlideTheme, 'logo'> & { logoSize?: { width: number; height: number } }
-  >('themes', THEME_ID);
+  const stored = await vault.get<StoredTheme>('themes', THEME_ID);
   if (!stored) return DEFAULT_THEME;
-  const { logoSize, ...theme } = stored;
+  const { logoSize, report, ...rest } = stored;
+  const theme: SlideTheme = rest;
   const bytes = logoSize ? await vault.getBytes('themes', THEME_ID) : undefined;
-  return bytes && logoSize ? { ...theme, logo: { bytes, ...logoSize } } : theme;
+  if (bytes && logoSize) theme.logo = { bytes, ...logoSize };
+  if (report) {
+    const { coverSize, coverLogoSize, ...style } = report;
+    const image = async (id: string, size?: Size): Promise<ThemeImage | undefined> => {
+      const b = size ? await vault.getBytes('themes', id) : undefined;
+      return b && size ? { bytes: b, ...size } : undefined;
+    };
+    const full: ReportStyle = { ...style };
+    const cover = await image(IMAGE_IDS.cover, coverSize);
+    const coverLogo = await image(IMAGE_IDS.coverLogo, coverLogoSize);
+    if (cover) full.cover = cover;
+    if (coverLogo) full.coverLogo = coverLogo;
+    theme.report = full;
+  }
+  return theme;
 }
 
+const size = (i: ThemeImage): Size => ({ width: i.width, height: i.height });
+
 export async function saveTheme(vault: Vault, theme: SlideTheme): Promise<void> {
-  const { logo, ...rest } = theme;
-  const value = logo ? { ...rest, logoSize: { width: logo.width, height: logo.height } } : rest;
+  const { logo, report, ...rest } = theme;
+  const value: StoredTheme = logo ? { ...rest, logoSize: size(logo) } : rest;
+  if (report) {
+    const { cover, coverLogo, ...style } = report;
+    value.report = {
+      ...style,
+      ...(cover ? { coverSize: size(cover) } : {}),
+      ...(coverLogo ? { coverLogoSize: size(coverLogo) } : {}),
+    };
+  }
+  for (const key of ['cover', 'coverLogo'] as const) {
+    const img = report?.[key];
+    if (img) await vault.put('themes', { id: IMAGE_IDS[key] }, {}, img.bytes);
+    else await vault.delete('themes', IMAGE_IDS[key]);
+  }
   // Remove first so that dropping the logo also drops its stored bytes.
   if (!logo) await vault.delete('themes', THEME_ID);
   await vault.put('themes', { id: THEME_ID }, value, logo?.bytes);
@@ -29,18 +75,17 @@ export async function saveTheme(vault: Vault, theme: SlideTheme): Promise<void> 
 export const THEME_FORMAT = 'pwnpoint-theme';
 
 /** The theme file's content as a plain object (also embedded in mission files). */
+const imageFile = (i: ThemeImage | undefined) =>
+  i ? { pngBase64: bytesToBase64(i.bytes), width: i.width, height: i.height } : null;
+
 export function themeFileObject(theme: SlideTheme) {
-  const { logo, ...rest } = theme;
-  return {
-    format: THEME_FORMAT,
-    version: 1,
-    theme: {
-      ...rest,
-      logo: logo
-        ? { pngBase64: bytesToBase64(logo.bytes), width: logo.width, height: logo.height }
-        : null,
-    },
-  };
+  const { logo, report, ...rest } = theme;
+  const out: Record<string, unknown> = { ...rest, logo: imageFile(logo) };
+  if (report) {
+    const { cover, coverLogo, ...style } = report;
+    out.report = { ...style, cover: imageFile(cover), coverLogo: imageFile(coverLogo) };
+  }
+  return { format: THEME_FORMAT, version: 1, theme: out };
 }
 
 export function exportTheme(theme: SlideTheme): string {
@@ -126,28 +171,50 @@ export function validateThemeFile(data: unknown): ImportResult {
     minFontPt: typeof minFontPt === 'number' ? minFontPt : DEFAULT_THEME.minFontPt,
   };
 
-  if (t.logo !== null && t.logo !== undefined) {
-    const l = t.logo;
+  const image = (v: unknown, what: string, maxBytes: number): ThemeImage | undefined => {
+    if (v === null || v === undefined) return undefined;
     if (
-      !isObj(l) ||
-      typeof l.pngBase64 !== 'string' ||
-      typeof l.width !== 'number' ||
-      typeof l.height !== 'number'
+      !isObj(v) ||
+      typeof v.pngBase64 !== 'string' ||
+      typeof v.width !== 'number' ||
+      typeof v.height !== 'number'
     ) {
-      errors.push('The logo is malformed.');
-    } else {
-      try {
-        const bytes = base64ToBytes(l.pngBase64);
-        const png = [137, 80, 78, 71, 13, 10, 26, 10];
-        if (bytes.length > MAX_LOGO_BYTES) errors.push('The logo is larger than 2 MB.');
-        else if (png.some((b, i) => bytes[i] !== b)) errors.push('The logo must be a PNG image.');
-        else if (l.width < 1 || l.height < 1 || l.width > 4096 || l.height > 4096)
-          errors.push('The logo size is invalid.');
-        else theme.logo = { bytes, width: Math.round(l.width), height: Math.round(l.height) };
-      } catch {
-        errors.push('The logo data is not valid base64.');
-      }
+      errors.push(`The ${what} is malformed.`);
+      return undefined;
     }
+    try {
+      const bytes = base64ToBytes(v.pngBase64);
+      const png = [137, 80, 78, 71, 13, 10, 26, 10];
+      const mb = maxBytes / 1024 / 1024;
+      if (bytes.length > maxBytes) errors.push(`The ${what} is larger than ${mb} MB.`);
+      else if (png.some((b, k) => bytes[k] !== b)) errors.push(`The ${what} must be a PNG image.`);
+      else if (v.width < 1 || v.height < 1 || v.width > 8192 || v.height > 8192)
+        errors.push(`The ${what} size is invalid.`);
+      else return { bytes, width: Math.round(v.width), height: Math.round(v.height) };
+    } catch {
+      errors.push(`The ${what} data is not valid base64.`);
+    }
+    return undefined;
+  };
+
+  const logo = image(t.logo, 'logo', MAX_LOGO_BYTES);
+  if (logo) theme.logo = logo;
+  if (t.report !== undefined && t.report !== null) {
+    const r = isObj(t.report) ? t.report : (errors.push('The report style is malformed.'), {});
+    const d = DEFAULT_REPORT_STYLE;
+    const report: ReportStyle = {
+      primary: r.primary === undefined ? d.primary : color(r.primary, 'Report primary colour'),
+      dark: r.dark === undefined ? d.dark : color(r.dark, 'Report dark colour'),
+      accent: r.accent === undefined ? d.accent : color(r.accent, 'Report accent colour'),
+      light: r.light === undefined ? d.light : color(r.light, 'Report light colour'),
+      onPrimary:
+        r.onPrimary === undefined ? d.onPrimary : color(r.onPrimary, 'Report text on colour'),
+    };
+    const cover = image(r.cover, 'cover image', MAX_COVER_BYTES);
+    const coverLogo = image(r.coverLogo, 'cover logo', MAX_LOGO_BYTES);
+    if (cover) report.cover = cover;
+    if (coverLogo) report.coverLogo = coverLogo;
+    theme.report = report;
   }
   return errors.length ? { ok: false, errors } : { ok: true, theme };
 }

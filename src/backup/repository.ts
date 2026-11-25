@@ -5,6 +5,7 @@ import type { Recommendation } from '../recommendations/model';
 import { listRecommendations } from '../recommendations/repository';
 import { listScenarios } from '../scenarios/repository';
 import type { Scenario } from '../scenarios/model';
+import type { SlideTheme } from '../slides/theme';
 import { loadTheme, saveTheme } from '../slides/themeStore';
 import type { ContentStore } from '../storage/schema';
 import type { Vault } from '../storage/vault';
@@ -173,6 +174,19 @@ async function deleteStale(vault: Vault, p: ProjectContent): Promise<void> {
   }
 }
 
+/** The theme with its logo and report images re-encoded through a canvas. */
+export async function reencodeTheme(theme: SlideTheme, reencode: Reencode): Promise<SlideTheme> {
+  const out: SlideTheme = { ...theme };
+  if (theme.logo) out.logo = await reencode(theme.logo.bytes);
+  if (theme.report) {
+    const report = { ...theme.report };
+    if (report.cover) report.cover = await reencode(report.cover.bytes);
+    if (report.coverLogo) report.coverLogo = await reencode(report.coverLogo.bytes);
+    out.report = report;
+  }
+  return out;
+}
+
 /**
  * Restores a validated mission into the vault. Every image is re-encoded first, so a bad image
  * stops the import before anything is written. A replaced project gets the file's records
@@ -196,8 +210,9 @@ export async function restoreMission(
     }
     clean.push({ ...p, evidence });
   }
-  let logo = content.theme?.logo;
-  if (options.theme && logo) logo = await options.reencode(logo.bytes);
+  // Theme images are re-encoded too, before anything is written.
+  let theme = content.theme;
+  if (options.theme && theme) theme = await reencodeTheme(theme, options.reencode);
 
   const result: RestoreResult = { projects: [], replaced: 0, copied: 0, themeRestored: false };
   for (const p of clean) {
@@ -217,9 +232,8 @@ export async function restoreMission(
     }
     result.projects.push(target.project);
   }
-  if (options.theme && content.theme) {
-    const { logo: _logo, ...theme } = content.theme;
-    await saveTheme(vault, logo ? { ...theme, logo } : theme);
+  if (options.theme && theme) {
+    await saveTheme(vault, theme);
     result.themeRestored = true;
   }
   return result;

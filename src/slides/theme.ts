@@ -3,6 +3,39 @@ import type { Rating, ScenarioSeverity } from '../scenarios/rating';
 
 export type SlideLanguage = 'en' | 'fr';
 
+/** A PNG image (metadata stripped) with its size in pixels. */
+export interface ThemeImage {
+  bytes: Uint8Array<ArrayBuffer>;
+  width: number;
+  height: number;
+}
+
+/** Look of the full report deck (reportDeck flag). The rest comes from the slide theme. */
+export interface ReportStyle {
+  /** Titles, table headers, agenda numbers of the current section. */
+  primary: string;
+  /** Table title bars and the cover when it has no image. */
+  dark: string;
+  /** Agenda bullets and highlights. */
+  accent: string;
+  /** Table cell background. */
+  light: string;
+  /** Text on primary and dark backgrounds. */
+  onPrimary: string;
+  /** Full-bleed background of the cover and closing slides. */
+  cover?: ThemeImage;
+  /** Logo shown on the cover and closing slides (usually a light version). */
+  coverLogo?: ThemeImage;
+}
+
+export const DEFAULT_REPORT_STYLE: ReportStyle = {
+  primary: '#0b5cad',
+  dark: '#0a2e52',
+  accent: '#2e9d6a',
+  light: '#eef1f5',
+  onPrimary: '#ffffff',
+};
+
 export interface SeverityColors {
   bg: string;
   fg: string;
@@ -22,7 +55,9 @@ export interface SlideTheme {
   /** Smallest font size allowed on a slide, in points. Text is never shrunk below it. */
   minFontPt: number;
   /** Logo as PNG bytes (metadata stripped), or none. */
-  logo?: { bytes: Uint8Array<ArrayBuffer>; width: number; height: number };
+  logo?: ThemeImage;
+  /** Report deck look. Missing: DEFAULT_REPORT_STYLE. */
+  report?: ReportStyle;
 }
 
 export const DEFAULT_THEME: SlideTheme = {
