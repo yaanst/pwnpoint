@@ -19,6 +19,8 @@ import { loadTheme } from '../slides/themeStore';
 import { useSlideImages } from '../slides/useSlideImages';
 import type { Vault } from '../storage/vault';
 import { on } from '../ui/events';
+import type { Recommendation } from '../recommendations/model';
+import { listRecommendations } from '../recommendations/repository';
 import { MAX_SCENARIO_SLIDES } from './layout';
 import { type Scenario, scenarioRef } from './model';
 
@@ -37,15 +39,19 @@ export function ScenarioPreview({
   const [theme, setTheme] = useState<SlideTheme | null>(null);
   const [busy, setBusy] = useState<Action | null>(null);
   const [status, setStatus] = useState('');
+  const [recs, setRecs] = useState<Recommendation[]>([]);
   useEffect(() => {
     const reload = () => void loadTheme(vault).then(setTheme);
     reload();
     return on('theme-changed', reload);
   }, [vault]);
+  useEffect(() => {
+    void listRecommendations(vault, scenario.projectId).then(setRecs);
+  }, [vault, scenario.projectId]);
   const urls = useSlideImages(vault, [], theme);
   const bundle = useMemo(
-    () => (theme ? scenarioBundle(scenario, findings, theme, canvasMeasure) : null),
-    [scenario, findings, theme],
+    () => (theme ? scenarioBundle(scenario, findings, theme, canvasMeasure, recs) : null),
+    [scenario, findings, theme, recs],
   );
   if (!theme || !bundle) return <p aria-busy="true">Loading…</p>;
 
@@ -61,7 +67,13 @@ export function ScenarioPreview({
     try {
       if (action === 'markdown') {
         await copyText(
-          scenarioMarkdown(scenario, new Map(findings.map((f) => [f.id, f])), theme.language),
+          scenarioMarkdown(
+            scenario,
+            new Map(findings.map((f) => [f.id, f])),
+            theme.language,
+            2,
+            recs,
+          ),
         );
         setStatus('Markdown copied to the clipboard.');
       } else if (action === 'pptx') {

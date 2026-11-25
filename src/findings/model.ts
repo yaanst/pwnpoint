@@ -53,7 +53,6 @@ export interface Finding {
   impact: string;
   /** Ordered steps to reproduce, Markdown-lite each. */
   steps: string[];
-  recommendation: string;
   /** URLs or citations, stored as text and never fetched. */
   references: string[];
   status: FindingStatus;
@@ -118,7 +117,6 @@ export function newFinding(
     description: '',
     impact: '',
     steps: [],
-    recommendation: '',
     references: [],
     status: 'draft',
     cvss: { ...DEFAULT_CVSS },

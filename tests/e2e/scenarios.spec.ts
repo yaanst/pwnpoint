@@ -6,7 +6,6 @@ import { expect, openWithNewVault, test } from './fixtures';
 async function addFinding(page: Page, title: string, impact: 'High' | 'Low') {
   await page.getByRole('button', { name: '+ New finding' }).click();
   await page.getByLabel('Title', { exact: true }).fill(title);
-  await page.getByLabel('Recommendation').fill(`Fix ${title}.`);
   await page
     .getByRole('radiogroup', { name: /Confidentiality/ })
     .getByRole('radio', { name: new RegExp(impact) })

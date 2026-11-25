@@ -1,4 +1,5 @@
 import type { Project } from '../findings/model';
+import { allCategories } from '../findings/categories';
 
 /**
  * Recommendations: remediation actions, numbered per category (REC.ACC.01), linked to the
@@ -149,4 +150,29 @@ export function withRecommendationNumberTaken(
   const counters = { ...project.recommendationCounters };
   counters[category] = Math.max(counters[category] ?? 1, number + 1);
   return { ...project, recommendationCounters: counters };
+}
+
+/** A recommendation as a row of a finding's slide table. */
+export interface RecommendationRow {
+  ref: string;
+  /** Category name, or "—". */
+  category: string;
+  title: string;
+  /** Markdown-lite. */
+  description: string;
+}
+
+/** The recommendations linked to a finding, highest priority first, ready for a slide table. */
+export function recommendationRows(
+  findingId: string,
+  recs: Recommendation[],
+  project: Pick<Project, 'recommendationCategories'> | undefined,
+): RecommendationRow[] {
+  const cats = allCategories(project?.recommendationCategories, 'recommendation');
+  return sortForPlan(recs.filter((r) => r.findingIds.includes(findingId))).map((r) => ({
+    ref: recommendationRef(r),
+    category: cats.find((c) => c.code === r.category)?.name ?? '—',
+    title: r.title.trim(),
+    description: r.description,
+  }));
 }

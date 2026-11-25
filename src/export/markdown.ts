@@ -1,5 +1,6 @@
 import { isLinear, successors } from '../scenarios/graph';
 import { effectiveSeverity, type Finding, findingRef, findingCvss } from '../findings/model';
+import type { Recommendation, RecommendationRow } from '../recommendations/model';
 import { type Scenario, scenarioRef, stepView } from '../scenarios/model';
 import { scenarioSeverity } from '../scenarios/rating';
 import { LABELS, type SlideLabels, type SlideLanguage } from '../slides/theme';
@@ -14,12 +15,26 @@ const list = (items: string[], ordered = false) =>
     .map((s, i) => `${ordered ? `${i + 1}.` : '-'} ${s.replace(/\n+/g, ' ')}`)
     .join('\n');
 
+/** Text for a Markdown table cell: one line, pipes escaped. */
+const cell = (t: string) => t.replace(/\s+/g, ' ').trim().replace(/\|/g, '\\|') || '—';
+
+/** A finding's linked recommendations as a Markdown table (empty when there are none). */
+function recommendationTable(rows: RecommendationRow[], L: SlideLabels): string {
+  if (!rows.length) return '';
+  return [
+    `| ${L.reference} | ${L.category} | ${L.recommendation} | ${L.description} |`,
+    '| --- | --- | --- | --- |',
+    ...rows.map((r) => `| ${[r.ref, r.category, r.title, r.description].map(cell).join(' | ')} |`),
+  ].join('\n');
+}
+
 /** One finding as Markdown, labelled in the slide language. */
 export function findingMarkdown(
   f: Finding,
   captions: string[],
   language: SlideLanguage,
   headingLevel = 2,
+  recommendations: RecommendationRow[] = [],
 ): string {
   const L = LABELS[language];
   const severity = effectiveSeverity(f);
@@ -39,7 +54,7 @@ export function findingMarkdown(
     block(L.description, f.description),
     block(L.impact, f.impact),
     block(L.steps, list(f.steps, true)),
-    block(L.recommendation, f.recommendation),
+    block(L.recommendations, recommendationTable(recommendations, L)),
     block(L.references, list(f.references)),
     block(
       L.evidence,
@@ -60,17 +75,20 @@ export function findingMarkdown(
 /** A whole project: title, each finding in report order, then the attack scenarios. */
 export function projectMarkdown(
   projectName: string,
-  findings: { finding: Finding; captions: string[] }[],
+  findings: { finding: Finding; captions: string[]; recommendations?: RecommendationRow[] }[],
   language: SlideLanguage,
   scenarios: Scenario[] = [],
   allFindings: Map<string, Finding> = new Map(findings.map((x) => [x.finding.id, x.finding])),
+  recs: Recommendation[] = [],
 ): string {
   const L = LABELS[language];
   const head = `# ${projectName.trim() || L.untitled}\n\n${L.findingCount(findings.length)}\n`;
   return [
     head,
-    ...findings.map((x) => findingMarkdown(x.finding, x.captions, language, 2)),
-    ...scenarios.map((s) => scenarioMarkdown(s, allFindings, language, 2)),
+    ...findings.map((x) =>
+      findingMarkdown(x.finding, x.captions, language, 2, x.recommendations ?? []),
+    ),
+    ...scenarios.map((s) => scenarioMarkdown(s, allFindings, language, 2, recs)),
   ].join('\n');
 }
 
@@ -80,13 +98,14 @@ export function scenarioMarkdown(
   findings: Map<string, Finding>,
   language: SlideLanguage,
   headingLevel = 2,
+  recs: Recommendation[] = [],
 ): string {
   const L = LABELS[language];
   const S = L.scenario;
   const h = '#'.repeat(headingLevel);
   const sub = '#'.repeat(headingLevel + 1);
   const one = (t: string) => t.replace(/\s+/g, ' ').trim();
-  const views = s.steps.map((st) => stepView(st, findings));
+  const views = s.steps.map((st) => stepView(st, findings, recs));
   const name = (i: number) => {
     const v = views[i];
     const st = s.steps[i];

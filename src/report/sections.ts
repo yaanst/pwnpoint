@@ -1,4 +1,3 @@
-import { allCategories } from '../findings/categories';
 import {
   effectiveSeverity,
   type Finding,
@@ -13,6 +12,7 @@ import {
   quadrantOf,
   type Recommendation,
   recommendationRef,
+  recommendationRows,
   sortForPlan,
 } from '../recommendations/model';
 import { scenarioFlow } from '../scenarios/layout';
@@ -22,12 +22,11 @@ import {
   type EvidenceRef,
   fitImage,
   LINE_HEIGHT,
-  type Paragraph,
   ptToIn,
   type SlideElement,
   textBox,
-  toParagraphs,
 } from '../slides/layout';
+import { cellParagraphs, recommendationCells, recommendationWidths } from '../slides/table';
 import { LABELS } from '../slides/theme';
 import {
   type Cell,
@@ -341,12 +340,8 @@ export function scenarioDetail(ctx: Ctx, s: Scenario, findings: Map<string, Find
 
 const MAX_EVIDENCE = 4;
 
-/** Markdown-lite text → paragraphs, bullets written with "• " (table cells have no indent). */
-export function paragraphs(text: string): Paragraph[] {
-  const ps = toParagraphs(text);
-  if (!ps.length) return [para('—')];
-  return ps.map((p) => (p.bullet ? { runs: [{ text: '•  ' }, ...p.runs] } : p));
-}
+/** Markdown-lite text → table-cell paragraphs. */
+export const paragraphs = cellParagraphs;
 
 /** The CVSS letters as shown: modified metrics replace base ones when the environmental score applies. */
 function vectorLetters(f: Finding, environmental: boolean): { key: string; value: string }[] {
@@ -439,9 +434,7 @@ export function vulnerabilitySlides(
   );
 
   // Recommendations table at the bottom; rows that do not fit go on continuation slides.
-  const cats = allCategories(project.recommendationCategories, 'recommendation');
-  const catName = (code?: string) => cats.find((c) => c.code === code)?.name ?? '—';
-  const widths = [1.6, 1.8, 3.1, CONTENT_W - 6.5];
+  const widths = recommendationWidths(CONTENT_W);
   const head: Cell[][] = [
     [L.reference, L.category, L.recommendation, L.description].map((text): Cell => ({
       text,
@@ -451,12 +444,7 @@ export function vulnerabilitySlides(
       align: 'center',
     })),
   ];
-  const rows = sortForPlan(recs).map((r): Cell[] => [
-    { text: recommendationRef(r), align: 'center' },
-    { text: catName(r.category), align: 'center' },
-    { text: r.title.trim() || '—' },
-    { text: paragraphs(r.description), sizePt: 10 },
-  ]);
+  const rows = recommendationCells(recommendationRows(f.id, recs, project));
   const MIN_TABLE_TOP = 4.3;
   let tableTop = CONTENT_BOTTOM;
   let recoElements: SlideElement[] = [];

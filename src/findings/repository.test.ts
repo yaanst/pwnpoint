@@ -27,6 +27,16 @@ async function readyVault(name = `findings-test-${++n}`) {
 }
 
 describe('finding repository', () => {
+  it('drops the free-text recommendation of findings saved by older versions', async () => {
+    const { vault } = await readyVault();
+    const p = await createProject(vault, 'Old');
+    const f = await createFinding(vault, p.id);
+    const old = { ...f, recommendation: 'Patch it.' };
+    await vault.put('findings', { id: f.id, projectId: p.id, updatedAt: 1 }, old);
+    expect(await getFinding(vault, f.id)).not.toHaveProperty('recommendation');
+    expect((await listFindings(vault, p.id))[0]).not.toHaveProperty('recommendation');
+  });
+
   it('numbers findings per project and never reuses a number', async () => {
     const { vault } = await readyVault();
     const acme = await createProject(vault, ' ACME 2026 ');

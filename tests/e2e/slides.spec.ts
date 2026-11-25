@@ -42,7 +42,7 @@ test('shows a live 16:9 slide preview with title, severity, CVSS and evidence', 
   expect((box?.width ?? 0) / (box?.height ?? 1)).toBeCloseTo(16 / 9, 1);
 
   await page.getByLabel('Title', { exact: true }).fill('Kerberoastable service account');
-  await page.getByLabel('Recommendation').fill('Use **gMSA** accounts.');
+  await page.getByLabel('Impact', { exact: true }).fill('Use **gMSA** accounts.');
   for (const metric of ['Confidentiality', 'Integrity', 'Availability']) {
     await page
       .getByRole('radiogroup', { name: new RegExp(metric) })
@@ -52,7 +52,7 @@ test('shows a live 16:9 slide preview with title, severity, CVSS and evidence', 
   await expect(preview(page)).toContainText('Kerberoastable service account');
   await expect(preview(page)).toContainText('Critical');
   await expect(preview(page)).toContainText('CVSS 3.1 9.8');
-  await expect(preview(page)).toContainText('Recommendation');
+  await expect(preview(page)).toContainText('Impact');
   await expect(preview(page).locator('tspan', { hasText: 'gMSA' })).toHaveAttribute(
     'font-weight',
     'bold',
@@ -84,10 +84,10 @@ test('applies the slide theme: French labels, footer, logo, and contrast warning
   await openWithNewVault(page);
   await page.getByRole('link', { name: 'Settings' }).click();
   const sample = page.getByRole('img', { name: 'Sample slide with this theme' });
-  await expect(sample).toContainText('Recommendation');
+  await expect(sample).toContainText('Affected assets');
 
   await page.getByLabel('Slide language').selectOption('fr');
-  await expect(sample).toContainText('Recommandation');
+  await expect(sample).toContainText('Actifs concernés');
   await expect(sample).toContainText('Élevée');
   await page.getByLabel('Footer text').fill('ACME – Diffusion restreinte');
   await expect(sample).toContainText('ACME – Diffusion restreinte');

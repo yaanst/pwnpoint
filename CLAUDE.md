@@ -98,7 +98,9 @@ when behaviour changes.
   replace; the original is kept until the user confirms).
 - `src/slides/`: one slide model drives every output. `layout.ts` (pure: finding + theme +
   `Measure` → positioned elements, wrapped lines, overflow warnings; never shrinks text below
-  `theme.minFontPt`), `wrap.ts`, `measure.ts` (canvas), `SlideSvg.tsx` (preview), `theme.ts`
+  `theme.minFontPt`; `buildFindingSlides` adds the linked-recommendations table and continuation
+  slides), `table.ts` (pure: `drawTable` with row/column spans, `fitRows`, the recommendations
+  table shared with the report deck), `wrap.ts`, `measure.ts` (canvas), `SlideSvg.tsx` (preview), `theme.ts`
   (EN/FR labels), `themeStore.ts` (vault storage + strict JSON import). Tests use `testing.ts`.
 - `src/export/`: outputs from the slide model. `pptx.ts` (in-house OOXML writer, native shapes;
   its namespace URLs are allowlisted identifiers), `zip.ts` (stored-only ZIP, deterministic),
@@ -128,7 +130,8 @@ when behaviour changes.
   `labels.ts` (EN/FR), `ReportExport.tsx` (previews + .pptx). Look: `SlideTheme.report`
   (`ReportStyle`: colours, cover image and cover logo stored as their own `themes` records), edited
   in `slides/ReportStyleFields.tsx`. Branded themes are local files: never commit one.
-- `src/backup/`: mission files (`.pwnp`, format version 5; versions 1–4 still read). `mission.ts` (stored ZIP; plain or AES-GCM payload under a
+- `src/backup/`: mission files (`.pwnp`, format version 6; versions 1–5 still read, a finding's old
+  free-text `recommendation` is ignored). `mission.ts` (stored ZIP; plain or AES-GCM payload under a
   PBKDF2 key, `encryptWithPassphrase` in `crypto.ts`), `validate.ts` (strict field-by-field rebuild,
   limits, cross-references; never trust the file), `repository.ts` (collect, restore with replace /
   copy, re-encode every image before writing), `files.ts` (native save dialog or download),

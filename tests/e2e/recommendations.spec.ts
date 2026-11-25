@@ -81,6 +81,12 @@ test('links recommendations from the finding editor, and unlinks deleted finding
   await page.getByRole('button', { name: 'Link', exact: true }).click();
   await page.getByRole('button', { name: 'Unlink REC.ORG.01' }).click();
   await expect(page.getByTestId('linked-recommendations')).not.toContainText('REC.ORG.01');
+  // The finding has no free-text recommendation: its slide lists the linked ones in a table.
+  await expect(page.getByRole('textbox', { name: 'Recommendation', exact: true })).toHaveCount(0);
+  const slide = page.getByRole('img', { name: /^Slide preview of/ });
+  await expect(slide).toContainText('REC.HAR.01');
+  await expect(slide).not.toContainText('REC.ORG.01');
+  await expect(slide).toContainText('Hardening');
 
   await page.getByRole('link', { name: 'Recommendations' }).click();
   await expect(row(page, 'REC.HAR.01')).toContainText('VLN.01, VLN.02');

@@ -182,7 +182,7 @@ export function StepList({
                 />
                 <p class="hint" id={`st-note-hint-${step.id}`}>
                   For a chain breaker, the note is the fix shown under “Break the chain”
-                  {step.kind === 'finding' ? ' (empty: the finding’s recommendation)' : ''}.
+                  {step.kind === 'finding' ? ' (empty: its linked recommendations)' : ''}.
                 </p>
               </div>
               {branches && (

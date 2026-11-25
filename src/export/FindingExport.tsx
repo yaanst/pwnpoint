@@ -52,7 +52,13 @@ export function FindingExport({
         setStatus(`PowerPoint file downloaded.${note}`);
       } else if (action === 'markdown') {
         await copyText(
-          findingMarkdown(finding, bundle.captions.get(finding.id) ?? [], theme.language),
+          findingMarkdown(
+            finding,
+            bundle.captions.get(finding.id) ?? [],
+            theme.language,
+            2,
+            bundle.recommendations.get(finding.id) ?? [],
+          ),
         );
         setStatus('Markdown copied to the clipboard.');
       } else {

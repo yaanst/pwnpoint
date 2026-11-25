@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { type Finding, newFinding } from '../findings/model';
+import type { RecommendationRow } from '../recommendations/model';
 import {
   buildCoverSlide,
   buildFindingSlide,
+  buildFindingSlides,
   fitImage,
   SLIDE_H,
+  type Slide,
   SLIDE_W,
   type TextElement,
   toParagraphs,
@@ -19,7 +22,6 @@ const finding = (patch: Partial<Finding> = {}): Finding => ({
   title: 'SQL injection',
   description: 'The **q** parameter is concatenated.',
   impact: '- Data theft\n- Account takeover',
-  recommendation: 'Use prepared statements.',
   cvss: { ...critical },
   ...patch,
 });
@@ -50,6 +52,67 @@ describe('toParagraphs', () => {
   });
 });
 
+const rec = (n: number, description = 'Short.'): RecommendationRow => ({
+  ref: `REC.ACC.0${n}`,
+  category: 'Access',
+  title: `Action ${n}`,
+  description,
+});
+const cellTexts = (s: Slide) =>
+  s.elements.filter((e): e is TextElement => e.kind === 'text' && e.role === 'cell').map(textOf);
+
+describe('buildFindingSlides', () => {
+  it('adds a table of the linked recommendations: reference, category, title, description', () => {
+    const [s, ...more] = buildFindingSlides(finding(), [], DEFAULT_THEME, fakeMeasure, [
+      rec(1),
+      rec(2),
+    ]);
+    expect(more).toEqual([]);
+    expect(cellTexts(s as Slide)).toEqual([
+      'Reference',
+      'Category',
+      'Recommendation',
+      'Description',
+      'REC.ACC.01',
+      'Access',
+      'Action 1',
+      'Short.',
+      'REC.ACC.02',
+      'Access',
+      'Action 2',
+      'Short.',
+    ]);
+    // The text sections end above the table.
+    const top = Math.min(
+      ...(s as Slide).elements.flatMap((e) => (e.kind === 'rect' && e.y > 2 ? [e.y] : [])),
+    );
+    for (const e of texts(s as Slide, 'section')) expect(e.y + e.h).toBeLessThanOrEqual(top);
+    expect(s?.warnings).toEqual([]);
+  });
+
+  it('keeps the first rows on the finding slide and continues the rest on the next slides', () => {
+    const long = Array(5).fill('A long remediation step.').join('\n');
+    const rows = [1, 2, 3, 4, 5].map((n) => rec(n, long));
+    const slides = buildFindingSlides(finding(), [], DEFAULT_THEME, fakeMeasure, rows);
+    expect(slides.length).toBeGreaterThan(1);
+    expect(cellTexts(slides[0] as Slide)).toContain('REC.ACC.01');
+    expect(textOf(first(slides[1] as Slide, 'title'))).toBe('SQL injection (continued)');
+    const refs = slides.flatMap((s) => cellTexts(s).filter((t) => t.startsWith('REC.')));
+    expect(refs).toEqual(['REC.ACC.01', 'REC.ACC.02', 'REC.ACC.03', 'REC.ACC.04', 'REC.ACC.05']);
+    for (const s of slides) {
+      for (const e of s.elements) {
+        if (e.kind === 'rect') expect(e.y + e.h).toBeLessThanOrEqual(SLIDE_H - 0.8 + 1e-6);
+      }
+    }
+  });
+
+  it('has no table without linked recommendations', () => {
+    const slides = buildFindingSlides(finding(), [], DEFAULT_THEME, fakeMeasure);
+    expect(slides).toHaveLength(1);
+    expect(cellTexts(slides[0] as Slide)).toEqual([]);
+  });
+});
+
 describe('buildFindingSlide', () => {
   it('lays out a 16:9 slide with reference, title, severity, CVSS and sections', () => {
     const s = buildFindingSlide(finding(), [], DEFAULT_THEME, fakeMeasure);
@@ -60,7 +123,7 @@ describe('buildFindingSlide', () => {
     expect(textOf(first(s, 'badge'))).toBe('Critical');
     expect(textOf(first(s, 'score'))).toBe('CVSS 3.1 9.8');
     expect(textOf(first(s, 'vector'))).toBe('CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H');
-    expect(texts(s, 'heading').map(textOf)).toEqual(['Description', 'Impact', 'Recommendation']);
+    expect(texts(s, 'heading').map(textOf)).toEqual(['Description', 'Impact']);
     expect(s.elements.find((e) => e.kind === 'rect')).toMatchObject({
       fill: DEFAULT_THEME.severity.Critical.bg,
     });
@@ -75,12 +138,7 @@ describe('buildFindingSlide', () => {
       fakeMeasure,
     );
     expect(textOf(first(s, 'badge'))).toBe('Critique');
-    expect(texts(s, 'heading').map(textOf)).toEqual([
-      'Actifs concernés',
-      'Description',
-      'Impact',
-      'Recommandation',
-    ]);
+    expect(texts(s, 'heading').map(textOf)).toEqual(['Actifs concernés', 'Description', 'Impact']);
   });
 
   it('puts up to two images in a right column and narrows the text', () => {

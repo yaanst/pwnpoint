@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import type { Finding } from '../findings/model';
 import { trackSave } from '../findings/pendingSaves';
 import type { Vault } from '../storage/vault';
+import { emit } from '../ui/events';
 import { recommendationHref } from '../ui/router';
 import { type Recommendation, recommendationRef, sortForPlan } from './model';
 import { createRecommendation, listRecommendations, setLinked } from './repository';
@@ -23,6 +24,7 @@ export function LinkedRecommendations({ vault, finding }: { vault: Vault; findin
   const link = async (r: Recommendation, on: boolean) => {
     const saved = await trackSave(setLinked(vault, r, finding.id, on));
     setRecs(recs.map((x) => (x.id === saved.id ? saved : x)));
+    emit('recommendations-changed');
     setChoice('');
     setMessage(`${recommendationRef(r)} ${on ? 'linked' : 'unlinked'}.`);
   };

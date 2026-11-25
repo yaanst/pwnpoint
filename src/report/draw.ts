@@ -10,6 +10,7 @@ import {
 } from '../slides/layout';
 import { DEFAULT_REPORT_STYLE, type ReportStyle, type SlideTheme } from '../slides/theme';
 import type { Measure } from '../slides/wrap';
+import { type Cell, drawTable, type TableResult, type TableStyle } from '../slides/table';
 import { type ReportLabels, REPORT_LABELS } from './labels';
 
 /** Drawing helpers shared by the report deck slides. Pure: no DOM. */
@@ -154,33 +155,9 @@ export function footer(ctx: Ctx, page: number): SlideElement[] {
   return out;
 }
 
-export interface Cell {
-  text: string | Paragraph[];
-  fill?: string;
-  color?: string;
-  bold?: boolean;
-  align?: 'left' | 'center' | 'right';
-  sizePt?: number;
-  colSpan?: number;
-  rowSpan?: number;
-}
+export type { Cell, TableResult } from '../slides/table';
 
-export interface TableResult {
-  elements: SlideElement[];
-  /** Bottom edge of the table, in inches. */
-  bottom: number;
-  /** Rows of the table that end below `maxBottom`. */
-  overflow: boolean;
-}
-
-const PAD_X = 0.08;
-const PAD_Y = 0.05;
-
-/**
- * A table of filled cells with white grid lines. Row heights follow the wrapped text (cells
- * spanning rows only grow the last row they cover). Cells list the slots left to right,
- * skipping slots covered by a cell spanning from above.
- */
+/** The report's table: `drawTable` with the report fonts and colours. */
 export function table(
   ctx: Ctx,
   x: number,
@@ -189,103 +166,19 @@ export function table(
   rows: Cell[][],
   opts: { sizePt?: number; minRowH?: number; maxBottom?: number; grid?: string } = {},
 ): TableResult {
-  const size = ctx.pt(opts.sizePt ?? 11);
-  const minRowH = opts.minRowH ?? 0.3;
-  const grid = opts.grid ?? '#ffffff';
-  // Place every cell in the grid.
-  const taken = rows.map(() => widths.map(() => false));
-  const placed: { cell: Cell; r: number; c: number; rs: number; cs: number }[] = [];
-  rows.forEach((row, r) => {
-    let c = 0;
-    for (const cell of row) {
-      while (c < widths.length && taken[r]?.[c]) c++;
-      if (c >= widths.length) break;
-      const cs = Math.min(cell.colSpan ?? 1, widths.length - c);
-      const rs = Math.min(cell.rowSpan ?? 1, rows.length - r);
-      for (let i = r; i < r + rs; i++) {
-        for (let j = c; j < c + cs; j++) {
-          const line = taken[i];
-          if (line) line[j] = true;
-        }
-      }
-      placed.push({ cell, r, c, rs, cs });
-      c += cs;
-    }
+  return drawTable(tableStyle(ctx), x, y, widths, rows, {
+    ...opts,
+    maxBottom: opts.maxBottom ?? CONTENT_BOTTOM,
   });
-  const xs = widths.reduce<number[]>((acc, w) => [...acc, (acc.at(-1) ?? x) + w], [x]);
-  const width = (c: number, cs: number) => (xs[c + cs] ?? 0) - (xs[c] ?? 0);
-  const paragraphs = (cell: Cell) =>
-    typeof cell.text === 'string'
-      ? cell.text.split('\n').map((t) => para(t, cell.bold))
-      : cell.text;
-  const needed = (p: (typeof placed)[number]) => {
-    const s = p.cell.sizePt ? ctx.pt(p.cell.sizePt) : size;
-    const box = textBox(
-      paragraphs(p.cell),
-      {
-        role: 'measure',
-        x: 0,
-        y: 0,
-        w: width(p.c, p.cs) - 2 * PAD_X,
-        h: 100,
-        sizePt: s,
-        color: '#000000',
-        ...ctx.body,
-      },
-      ctx.measure,
-    );
-    return Math.max(1, box.lines.length) * ptToIn(s) * LINE_HEIGHT + 2 * PAD_Y;
-  };
-  const heights = rows.map(() => minRowH);
-  for (const p of placed.filter((q) => q.rs === 1)) {
-    heights[p.r] = Math.max(heights[p.r] ?? minRowH, needed(p));
-  }
-  for (const p of placed.filter((q) => q.rs > 1)) {
-    const have = heights.slice(p.r, p.r + p.rs).reduce((a, b) => a + b, 0);
-    const want = needed(p);
-    const last = p.r + p.rs - 1;
-    if (want > have) heights[last] = (heights[last] ?? minRowH) + want - have;
-  }
-  const ys = heights.reduce<number[]>((acc, h) => [...acc, (acc.at(-1) ?? y) + h], [y]);
-  const elements: SlideElement[] = [];
-  for (const p of placed) {
-    const cx = xs[p.c] ?? x;
-    const cy = ys[p.r] ?? y;
-    const w = width(p.c, p.cs);
-    const h = (ys[p.r + p.rs] ?? cy) - cy;
-    elements.push({
-      kind: 'rect',
-      x: cx,
-      y: cy,
-      w,
-      h,
-      fill: p.cell.fill ?? ctx.style.light,
-      stroke: grid,
-      strokePt: 1,
-    });
-    elements.push(
-      textBox(
-        paragraphs(p.cell),
-        {
-          role: 'cell',
-          x: cx + PAD_X,
-          y: cy + PAD_Y,
-          w: w - 2 * PAD_X,
-          h: h - 2 * PAD_Y,
-          sizePt: p.cell.sizePt ? ctx.pt(p.cell.sizePt) : size,
-          color: p.cell.color ?? ctx.theme.colors.text,
-          bold: !!p.cell.bold,
-          align: p.cell.align ?? 'left',
-          valign: 'middle',
-          ...ctx.body,
-        },
-        ctx.measure,
-      ),
-    );
-  }
-  const bottom = ys.at(-1) ?? y;
-  return { elements, bottom, overflow: bottom > (opts.maxBottom ?? CONTENT_BOTTOM) + 1e-6 };
 }
+
+export const tableStyle = (ctx: Ctx): TableStyle => ({
+  measure: ctx.measure,
+  ...ctx.body,
+  minFontPt: ctx.theme.minFontPt,
+  fill: ctx.style.light,
+  color: ctx.theme.colors.text,
+});
 
 /** A dark title bar cell spanning the whole table. */
 export const titleRow = (ctx: Ctx, text: string, cols: number): Cell[] => [

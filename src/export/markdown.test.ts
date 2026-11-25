@@ -9,7 +9,6 @@ const finding = (patch: Partial<Finding> = {}): Finding => ({
   description: 'The **comment** field is not encoded.',
   impact: '- Session theft',
   steps: ['Log in', 'Post `<script>`'],
-  recommendation: 'Encode output.',
   references: ['OWASP A03'],
   cvss: { AV: 'N', AC: 'L', PR: 'L', UI: 'R', S: 'C', C: 'L', I: 'L', A: 'N' },
   ...patch,
@@ -17,7 +16,15 @@ const finding = (patch: Partial<Finding> = {}): Finding => ({
 
 describe('findingMarkdown', () => {
   it('writes every section in order, keeping Markdown-lite as is', () => {
-    expect(findingMarkdown(finding(), ['Payload stored', ''], 'en')).toBe(
+    const recs = [
+      {
+        ref: 'REC.HAR.01',
+        category: 'Hardening',
+        title: 'Encode output',
+        description: 'Encode on output;\nuse a | safe template.',
+      },
+    ];
+    expect(findingMarkdown(finding(), ['Payload stored', ''], 'en', 2, recs)).toBe(
       [
         '## VLN.04 Stored XSS',
         '',
@@ -40,9 +47,11 @@ describe('findingMarkdown', () => {
         '1. Log in',
         '2. Post `<script>`',
         '',
-        '### Recommendation',
+        '### Recommendations',
         '',
-        'Encode output.',
+        '| Reference | Category | Recommendation | Description |',
+        '| --- | --- | --- | --- |',
+        '| REC.HAR.01 | Hardening | Encode output | Encode on output; use a \\| safe template. |',
         '',
         '### References',
         '',

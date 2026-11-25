@@ -148,12 +148,6 @@ function FindingEditor({ vault, initial }: { vault: Vault; initial: Finding }) {
           onChange={(impact) => update({ impact })}
         />
         <StepsField value={f.steps} onChange={(steps) => update({ steps })} />
-        <RichTextField
-          id="f-recommendation"
-          label="Recommendation"
-          value={f.recommendation}
-          onChange={(recommendation) => update({ recommendation })}
-        />
         <LinkedRecommendations vault={vault} finding={f} />
         <LinesField
           id="f-references"
