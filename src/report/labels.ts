@@ -76,6 +76,35 @@ export interface ReportLabels {
   };
   criteria: Record<Criterion, { name: string; levels: Record<1 | 2 | 3, string> }>;
   quadrants: Record<Quadrant, string>;
+  scenarios: {
+    title: string;
+    reference: string;
+    scenario: string;
+    severity: string;
+    description: string;
+    rationale: string;
+    main: string;
+    exploitabilityAxis: string;
+    impactAxis: string;
+  };
+  vulns: {
+    vector: string;
+    baseScore: string;
+    envScore: string;
+    severity: string;
+    reference: string;
+    category: string;
+    recommendation: string;
+    description: string;
+    continued: string;
+  };
+  plan: {
+    title: string;
+    ref: string;
+    name: string;
+    priority: string;
+    footnote: (client: string) => string;
+  };
 }
 
 export const REPORT_LABELS: Record<SlideLanguage, ReportLabels> = {
@@ -171,6 +200,36 @@ export const REPORT_LABELS: Record<SlideLanguage, ReportLabels> = {
     },
     criteria: CRITERION_INFO,
     quadrants: QUADRANT_NAMES,
+    scenarios: {
+      title: 'Identified attack scenarios',
+      reference: 'Reference',
+      scenario: 'Attack scenario',
+      severity: 'Severity',
+      description: 'Description',
+      rationale: 'Rationale',
+      main: 'Main scenario',
+      exploitabilityAxis: '↑ Exploitability',
+      impactAxis: 'Impact →',
+    },
+    vulns: {
+      vector: 'CVSS 3.1 vector (AV-AC-PR-UI-C-I-A-S)',
+      baseScore: 'Base score',
+      envScore: 'Env. score',
+      severity: 'Severity',
+      reference: 'Reference',
+      category: 'Category',
+      recommendation: 'Recommendation',
+      description: 'Description',
+      continued: '(continued)',
+    },
+    plan: {
+      title: 'Proposed action plan* to mitigate attack scenarios',
+      ref: 'Ref.',
+      name: 'Name',
+      priority: 'Priority',
+      footnote: (client) =>
+        `*Remediation actions are classified by the auditors from their understanding of ${client}’s organisational and technical context. This classification is not definitive and should be challenged by ${client}’s stakeholders.`,
+    },
   },
   fr: {
     title: 'Rapport d’audit',
@@ -282,6 +341,36 @@ export const REPORT_LABELS: Record<SlideLanguage, ReportLabels> = {
       'heavy-project': 'Projet lourd',
       'side-action': 'Action secondaire',
       'can-be-delayed': 'Peut être reportée',
+    },
+    scenarios: {
+      title: 'Scénarios d’attaque identifiés',
+      reference: 'Référence',
+      scenario: 'Scénario d’attaque',
+      severity: 'Sévérité',
+      description: 'Description',
+      rationale: 'Justification',
+      main: 'Scénario principal',
+      exploitabilityAxis: '↑ Exploitabilité',
+      impactAxis: 'Impact →',
+    },
+    vulns: {
+      vector: 'Vecteur CVSS 3.1 (AV-AC-PR-UI-C-I-A-S)',
+      baseScore: 'Score de base',
+      envScore: 'Score env.',
+      severity: 'Sévérité',
+      reference: 'Référence',
+      category: 'Catégorie',
+      recommendation: 'Recommandation',
+      description: 'Description',
+      continued: '(suite)',
+    },
+    plan: {
+      title: 'Plan d’action* proposé pour traiter les scénarios d’attaque',
+      ref: 'Réf.',
+      name: 'Intitulé',
+      priority: 'Priorité',
+      footnote: (client) =>
+        `*Le classement des actions est proposé par les auditeurs selon leur compréhension du contexte organisationnel et technique de ${client}. Il n’est pas définitif et doit être discuté avec les équipes de ${client}.`,
     },
   },
 };

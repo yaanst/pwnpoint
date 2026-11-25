@@ -760,6 +760,38 @@ function layoutGraph(
   measure: Measure,
 ): ScenarioLayout {
   const area = singleArea();
+  const g = graphFlow(scenario, views, texts, succ, area, theme, measure);
+  const slide = buildSlide(
+    scenario,
+    views,
+    texts,
+    g.fit,
+    0,
+    texts.length,
+    area,
+    theme,
+    measure,
+    'only',
+    g.elements,
+  );
+  if (g.blocked) {
+    slide.warnings.unshift(
+      `The branching flow does not fit on one slide, even at ${theme.minFontPt} pt. Shorten step titles and gains, or remove some paths. Export is blocked.`,
+    );
+  }
+  return { slides: [slide], blocked: g.blocked, fontPt: g.fit.sizePt };
+}
+
+/** A branching flow laid out in `area`: columns left to right, arrows for every link. */
+function graphFlow(
+  scenario: Scenario,
+  views: StepView[],
+  texts: NodeText[],
+  succ: number[][],
+  area: Area,
+  theme: SlideTheme,
+  measure: Measure,
+): { elements: SlideElement[]; fit: FlowFit; blocked: boolean } {
   const cols = columns(succ);
   const rows = Math.max(...cols.map((c) => c.length));
   const nodeW = Math.min(MAX_NODE_W, (area.w - (cols.length - 1) * GRAPH_GAP_X) / cols.length);
@@ -831,23 +863,45 @@ function layoutGraph(
   });
 
   const fit: FlowFit = { cols: cols.length, rows, nodeW, nodeH, sizePt: size };
-  const slide = buildSlide(
-    scenario,
-    views,
-    texts,
-    fit,
-    0,
-    texts.length,
-    area,
-    theme,
-    measure,
-    'only',
-    flow,
-  );
-  if (blocked) {
-    slide.warnings.unshift(
-      `The branching flow does not fit on one slide, even at ${theme.minFontPt} pt. Shorten step titles and gains, or remove some paths. Export is blocked.`,
-    );
+  return { elements: flow, fit, blocked };
+}
+
+/**
+ * A scenario's flow drawn in any area of one slide (the report's "Main scenario" box): a snake
+ * for a chain, columns for branching paths. Text goes down to the theme minimum; below that the
+ * flow is drawn overflowing and `fits` is false.
+ */
+export function scenarioFlow(
+  scenario: Scenario,
+  findings: Map<string, Finding>,
+  area: Area,
+  theme: SlideTheme,
+  measure: Measure,
+): { elements: SlideElement[]; fits: boolean } {
+  const views = scenario.steps.map((s) => stepView(s, findings));
+  const texts = nodeTexts(scenario, views, theme);
+  if (!texts.length) return { elements: [], fits: true };
+  const succ = successors(scenario.steps);
+  if (!isLinear(succ)) {
+    const g = graphFlow(scenario, views, texts, succ, area, theme, measure);
+    return { elements: g.elements, fits: !g.blocked };
   }
-  return { slides: [slide], blocked, fontPt: size };
+  for (const size of fontSizes(theme)) {
+    const fit = fitFlow(texts, area, size, theme, measure);
+    if (fit) {
+      return {
+        elements: flowElements(scenario, views, texts, fit, 0, area, theme, measure),
+        fits: true,
+      };
+    }
+  }
+  const size = theme.minFontPt;
+  const cols = Math.max(1, Math.min(MAX_COLS, texts.length));
+  const nodeW = (area.w - (cols - 1) * GAP_X) / cols;
+  const nodeH = Math.max(...texts.map((t) => nodeHeight(t, nodeW, size, theme, measure)));
+  const fit = { cols, rows: Math.ceil(texts.length / cols), nodeW, nodeH, sizePt: size };
+  return {
+    elements: flowElements(scenario, views, texts, fit, 0, area, theme, measure),
+    fits: false,
+  };
 }

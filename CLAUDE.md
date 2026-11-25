@@ -121,9 +121,10 @@ when behaviour changes.
   editor). Routes `#/recommendations`, `#/recommendations/<id>`. IndexedDB store added by migration 1 → 2.
 - `src/report/`: `mission.ts` (pure: `Project.mission` details, security status from the worst rated
   scenario, executive sentence, date range EN/FR, missing items), `repository.ts` (`saveMission`
-  re-reads the project), `ReportPage.tsx` (route `#/report`). Full report deck (`reportDeck` flag):
-  `deck.ts` (pure: cover, agenda per section with computed pages, sections, appendices, closing
-  slide), `draw.ts` (header, footer, `table()` with row/column spans and text-driven row heights),
+  re-reads the project), `ReportPage.tsx` (route `#/report`). Full report deck (`reportDeck` flag,
+  on): `deck.ts` (pure: cover, agenda per section with computed pages, sections, appendices, closing
+  slide), `sections.ts` (scenario matrix and details with `scenarioFlow` from `scenarios/layout.ts`,
+  one slide per validated finding with recommendations continued when long, action plan quadrants), `draw.ts` (header, footer, `table()` with row/column spans and text-driven row heights),
   `labels.ts` (EN/FR), `ReportExport.tsx` (previews + .pptx). Look: `SlideTheme.report`
   (`ReportStyle`: colours, cover image and cover logo stored as their own `themes` records), edited
   in `slides/ReportStyleFields.tsx`. Branded themes are local files: never commit one.

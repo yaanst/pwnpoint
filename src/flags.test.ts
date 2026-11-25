@@ -7,6 +7,10 @@ describe('flags', () => {
     expect(isEnabled('scenarioBranches')).toBe(true);
   });
 
+  it('ships the full report deck enabled', () => {
+    expect(isEnabled('reportDeck')).toBe(true);
+  });
+
   it('only holds booleans', () => {
     for (const value of Object.values(flags)) expect(typeof value).toBe('boolean');
   });
