@@ -113,6 +113,19 @@ for (const scheme of ['light', 'dark'] as const) {
     }
     await audit(page, 'scenario editor');
 
+    await page.getByRole('link', { name: 'Recommendations' }).click();
+    await audit(page, 'recommendations (empty)');
+    await page.getByRole('button', { name: 'Categories…' }).click();
+    await audit(page, 'recommendation categories dialog');
+    await page.getByRole('button', { name: 'Close' }).click();
+    await page.getByRole('button', { name: '+ New recommendation' }).click();
+    await page.getByLabel('Title', { exact: true }).fill('Use prepared statements');
+    await page.getByRole('checkbox', { name: /VLN\.01/ }).check();
+    await audit(page, 'recommendation editor');
+    await page.getByRole('link', { name: '← Recommendations' }).click();
+    await expect(page.getByTestId('row-REC.01')).toBeVisible();
+    await audit(page, 'recommendations list');
+
     await page.getByRole('link', { name: 'CVSS calculator' }).click();
     // Environmental metrics (behind the cvssAdvanced flag): audit them open.
     const environmental = page.getByText("Environmental metrics (this client's context)");

@@ -1,6 +1,7 @@
 import { copyEvidence, deleteEvidenceOf } from '../evidence/repository';
+import { unlinkFinding } from '../recommendations/repository';
 import type { Vault } from '../storage/vault';
-import { type Category, categoryProblem } from './categories';
+import { type Category, type CategoryKind, categoryProblem } from './categories';
 import {
   duplicateOf,
   type Finding,
@@ -91,40 +92,50 @@ export async function recategorize(
   return category ? { number, category } : { number };
 }
 
+const CATEGORY_FIELD = {
+  finding: 'categories',
+  recommendation: 'recommendationCategories',
+} as const;
+
 /** Adds one of the project's own categories. Throws with a message for the user. */
 export async function addCategory(
   vault: Vault,
   projectId: string,
   category: Category,
+  kind: CategoryKind = 'finding',
 ): Promise<Project> {
   const project = await getProject(vault, projectId);
+  const field = CATEGORY_FIELD[kind];
   const code = category.code.trim().toUpperCase();
-  const problem = categoryProblem(code, category.name, project.categories);
+  const problem = categoryProblem(code, category.name, project[field], kind);
   if (problem) throw new Error(problem);
   const next = {
     ...project,
-    categories: [...(project.categories ?? []), { code, name: category.name.trim() }],
+    [field]: [...(project[field] ?? []), { code, name: category.name.trim() }],
   };
   await vault.put('projects', { id: projectId }, next);
   return next;
 }
 
 /**
- * Removes one of the project's own categories, if no finding uses it. Its counter is kept, so
+ * Removes one of the project's own categories, if nothing uses it. Its counter is kept, so
  * adding the code again later never hands out a number already used.
  */
 export async function removeCategory(
   vault: Vault,
   projectId: string,
   code: string,
+  kind: CategoryKind = 'finding',
 ): Promise<Project> {
   const project = await getProject(vault, projectId);
-  const used = (await listFindings(vault, projectId)).some((f) => f.category === code);
-  if (used) throw new Error(`Findings use ${code}: move them to another category first.`);
-  const next = {
-    ...project,
-    categories: (project.categories ?? []).filter((c) => c.code !== code),
-  };
+  const field = CATEGORY_FIELD[kind];
+  const store = kind === 'finding' ? 'findings' : 'recommendations';
+  const used = (await vault.list<{ category?: string }>(store, projectId)).some(
+    (r) => r.value.category === code,
+  );
+  const what = kind === 'finding' ? 'Findings' : 'Recommendations';
+  if (used) throw new Error(`${what} use ${code}: move them to another category first.`);
+  const next = { ...project, [field]: (project[field] ?? []).filter((c) => c.code !== code) };
   await vault.put('projects', { id: projectId }, next);
   return next;
 }
@@ -159,8 +170,13 @@ export async function duplicateFinding(
   return saved;
 }
 
-/** Deletes a finding and its evidence. Its number is not reused. Scenario links come later. */
+/**
+ * Deletes a finding, its evidence and its links from recommendations. Its number is not reused.
+ * Scenario steps keep pointing at it and show it as missing.
+ */
 export async function deleteFinding(vault: Vault, id: string): Promise<void> {
+  const finding = await getFinding(vault, id);
+  if (finding) await unlinkFinding(vault, finding.projectId, id);
   await deleteEvidenceOf(vault, id);
   await vault.delete('findings', id);
 }

@@ -51,7 +51,8 @@ export function SaveMissionDialog({ vault, project, onClose }: Props) {
       await writeToTarget(target, bytes);
       const c = missionCounts(content);
       const what = project
-        ? `${plural(c.findings, 'finding')}, ${plural(c.images, 'image')}, ${plural(c.scenarios, 'scenario')}`
+        ? `${plural(c.findings, 'finding')}, ${plural(c.images, 'image')}, ${plural(c.scenarios, 'scenario')}` +
+          (c.recommendations ? `, ${plural(c.recommendations, 'recommendation')}` : '')
         : `${plural(c.projects, 'project')}, ${plural(c.findings, 'finding')}`;
       const verb = target.kind === 'download' ? 'downloaded' : 'saved';
       onClose(

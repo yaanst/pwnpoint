@@ -4,7 +4,14 @@ import type { Keyring, Sealed } from './crypto';
 export const DB_NAME = 'pwnpoint';
 
 /** Record stores holding user content. Every record is sealed when encryption is on. */
-export const CONTENT_STORES = ['projects', 'findings', 'evidence', 'scenarios', 'themes'] as const;
+export const CONTENT_STORES = [
+  'projects',
+  'findings',
+  'evidence',
+  'scenarios',
+  'themes',
+  'recommendations',
+] as const;
 export type ContentStore = (typeof CONTENT_STORES)[number];
 
 /**
@@ -33,6 +40,7 @@ export interface PwnPointDB extends DBSchema {
   evidence: { key: string; value: StoredRecord; indexes: { projectId: string; findingId: string } };
   scenarios: { key: string; value: StoredRecord; indexes: { projectId: string } };
   themes: { key: string; value: StoredRecord };
+  recommendations: { key: string; value: StoredRecord; indexes: { projectId: string } };
 }
 
 type UpgradeTx = IDBPTransaction<PwnPointDB, StoreNames<PwnPointDB>[], 'versionchange'>;
@@ -53,6 +61,13 @@ export const MIGRATIONS: readonly Migration[] = [
     evidence.createIndex('findingId', 'findingId');
     db.createObjectStore('scenarios', { keyPath: 'id' }).createIndex('projectId', 'projectId');
     db.createObjectStore('themes', { keyPath: 'id' });
+  },
+  // v1 → v2: recommendations.
+  (db) => {
+    db.createObjectStore('recommendations', { keyPath: 'id' }).createIndex(
+      'projectId',
+      'projectId',
+    );
   },
 ];
 

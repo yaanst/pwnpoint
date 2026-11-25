@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { openDB } from 'idb';
 import { describe, expect, it, vi } from 'vitest';
 import { WrongPassphraseError } from './crypto';
-import { DB_VERSION, type PwnPointDB, runMigrations } from './schema';
+import { DB_VERSION, MIGRATIONS, type PwnPointDB, runMigrations } from './schema';
 import { Vault, VaultLockedError } from './vault';
 
 const FAST = 1_000; // PBKDF2 iterations for tests only
@@ -14,19 +14,36 @@ async function raw(name: string) {
 }
 
 describe('schema', () => {
-  it('creates every store and index at version 1', async () => {
+  it('creates every store and index at the latest version', async () => {
     const name = freshName();
     (await Vault.open({ name })).close();
     const db = await raw(name);
-    expect(db.version).toBe(1);
+    expect(db.version).toBe(2);
     expect([...db.objectStoreNames].sort()).toEqual(
-      ['evidence', 'findings', 'meta', 'projects', 'scenarios', 'themes'].sort(),
+      ['evidence', 'findings', 'meta', 'projects', 'recommendations', 'scenarios', 'themes'].sort(),
     );
-    const tx = db.transaction(['findings', 'evidence', 'scenarios']);
+    const tx = db.transaction(['findings', 'evidence', 'scenarios', 'recommendations']);
     expect([...tx.objectStore('findings').indexNames]).toEqual(['projectId']);
     expect([...tx.objectStore('evidence').indexNames].sort()).toEqual(['findingId', 'projectId']);
     expect([...tx.objectStore('scenarios').indexNames]).toEqual(['projectId']);
+    expect([...tx.objectStore('recommendations').indexNames]).toEqual(['projectId']);
     db.close();
+  });
+
+  it('upgrades a version 1 database and keeps its data', async () => {
+    const name = freshName();
+    const v1 = await openDB<PwnPointDB>(name, 1, {
+      upgrade: (db, oldVersion, _n, tx) =>
+        runMigrations(db, oldVersion, tx, MIGRATIONS.slice(0, 1)),
+    });
+    await v1.put('meta', 'plain', 'mode');
+    await v1.put('projects', { id: 'p1', updatedAt: 1, payload: { plain: { name: 'Old' } } });
+    v1.close();
+    const vault = await Vault.open({ name });
+    expect(vault.state).toBe('ready');
+    expect(await vault.get('projects', 'p1')).toEqual({ name: 'Old' });
+    expect(await vault.list('recommendations')).toEqual([]);
+    vault.close();
   });
 
   it('runs only the migrations after the stored version, in order', () => {

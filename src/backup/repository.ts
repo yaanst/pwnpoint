@@ -1,6 +1,8 @@
 import { type Evidence, getEvidenceBytes } from '../evidence/repository';
 import type { Finding, Project } from '../findings/model';
 import { listFindings, listProjects } from '../findings/repository';
+import type { Recommendation } from '../recommendations/model';
+import { listRecommendations } from '../recommendations/repository';
 import { listScenarios } from '../scenarios/repository';
 import type { Scenario } from '../scenarios/model';
 import { loadTheme, saveTheme } from '../slides/themeStore';
@@ -24,6 +26,7 @@ async function projectContent(vault: Vault, project: Project): Promise<ProjectCo
     findings: await listFindings(vault, project.id),
     evidence,
     scenarios: await listScenarios(vault, project.id),
+    recommendations: await listRecommendations(vault, project.id),
   };
 }
 
@@ -53,6 +56,7 @@ export const missionCounts = (content: MissionContent) => ({
   findings: content.projects.reduce((n, p) => n + p.findings.length, 0),
   images: content.projects.reduce((n, p) => n + p.evidence.length, 0),
   scenarios: content.projects.reduce((n, p) => n + p.scenarios.length, 0),
+  recommendations: content.projects.reduce((n, p) => n + p.recommendations.length, 0),
 });
 
 /** Projects of the file that already exist in this browser (same id). */
@@ -104,6 +108,12 @@ function remap(p: ProjectContent, newId: () => string, name: string): ProjectCon
           : { ...st, id: newId() },
       ),
     })),
+    recommendations: p.recommendations.map((r) => ({
+      ...r,
+      id: newId(),
+      projectId,
+      findingIds: r.findingIds.map(fid),
+    })),
   };
 }
 
@@ -117,6 +127,7 @@ async function collides(vault: Vault, p: ProjectContent): Promise<boolean> {
     ...p.findings.map((f) => check('findings', f.id)),
     ...p.evidence.map((e) => check('evidence', e.meta.id)),
     ...p.scenarios.map((s) => check('scenarios', s.id)),
+    ...p.recommendations.map((r) => check('recommendations', r.id)),
   ];
   return (await Promise.all(checks)).some(Boolean);
 }
@@ -137,6 +148,13 @@ async function write(vault: Vault, p: ProjectContent): Promise<void> {
   for (const s of p.scenarios) {
     await vault.put<Scenario>('scenarios', { id: s.id, projectId: pid, updatedAt: s.updatedAt }, s);
   }
+  for (const r of p.recommendations) {
+    await vault.put<Recommendation>(
+      'recommendations',
+      { id: r.id, projectId: pid, updatedAt: r.updatedAt },
+      r,
+    );
+  }
   await vault.put<Project>('projects', { id: pid }, p.project);
 }
 
@@ -146,8 +164,9 @@ async function deleteStale(vault: Vault, p: ProjectContent): Promise<void> {
     ...p.findings.map((f) => f.id),
     ...p.evidence.map((e) => e.meta.id),
     ...p.scenarios.map((s) => s.id),
+    ...p.recommendations.map((r) => r.id),
   ]);
-  for (const store of ['evidence', 'findings', 'scenarios'] as const) {
+  for (const store of ['evidence', 'findings', 'scenarios', 'recommendations'] as const) {
     for (const r of await vault.list(store, p.project.id)) {
       if (!keep.has(r.id)) await vault.delete(store, r.id);
     }

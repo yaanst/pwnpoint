@@ -1065,3 +1065,13 @@ input.mono {
   font-weight: 600;
   margin-bottom: 0.25rem;
 }
+
+.plain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.plain-list li + li {
+  margin-top: 0.25rem;
+}

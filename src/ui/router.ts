@@ -11,6 +11,8 @@ export type Page =
   | { name: 'finding'; id: string }
   | { name: 'scenarios' }
   | { name: 'scenario'; id: string }
+  | { name: 'recommendations' }
+  | { name: 'recommendation'; id: string }
   | { name: 'cvss' }
   | { name: 'settings' }
   | { name: 'not-found' };
@@ -22,10 +24,12 @@ export function matchRoute(route: string): Page {
     return { name: 'findings' };
   }
   if (parts.length === 1 && parts[0] === 'scenarios') return { name: 'scenarios' };
-  if (parts.length === 2 && (parts[0] === 'findings' || parts[0] === 'scenarios') && parts[1]) {
+  if (parts.length === 1 && parts[0] === 'recommendations') return { name: 'recommendations' };
+  const one = { findings: 'finding', scenarios: 'scenario', recommendations: 'recommendation' };
+  if (parts.length === 2 && parts[0] && Object.hasOwn(one, parts[0]) && parts[1]) {
     try {
       const id = decodeURIComponent(parts[1]);
-      return parts[0] === 'findings' ? { name: 'finding', id } : { name: 'scenario', id };
+      return { name: one[parts[0] as keyof typeof one], id } as Page;
     } catch {
       return { name: 'not-found' };
     }
@@ -37,6 +41,7 @@ export function matchRoute(route: string): Page {
 
 export const findingHref = (id: string) => `#/findings/${encodeURIComponent(id)}`;
 export const scenarioHref = (id: string) => `#/scenarios/${encodeURIComponent(id)}`;
+export const recommendationHref = (id: string) => `#/recommendations/${encodeURIComponent(id)}`;
 
 export function useHashRoute(): string {
   const [route, setRoute] = useState(() => routeFromHash(location.hash));

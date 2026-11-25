@@ -6,6 +6,8 @@ import { FindingEditorPage } from './findings/FindingEditor';
 import { FindingsPage } from './findings/FindingsPage';
 import { ScenarioEditorPage } from './scenarios/ScenarioEditor';
 import { ScenariosPage } from './scenarios/ScenariosPage';
+import { RecommendationEditorPage } from './recommendations/RecommendationEditor';
+import { RecommendationsPage } from './recommendations/RecommendationsPage';
 import { DEFAULT_CVSS } from './findings/model';
 import { guardUnloadWhileSaving } from './findings/pendingSaves';
 import { AppearanceSettings } from './settings/AppearanceSettings';
@@ -33,6 +35,10 @@ export function App() {
         return <ScenariosPage vault={vault} />;
       case 'scenario':
         return <ScenarioEditorPage vault={vault} id={page.id} />;
+      case 'recommendations':
+        return <RecommendationsPage vault={vault} />;
+      case 'recommendation':
+        return <RecommendationEditorPage vault={vault} id={page.id} />;
       case 'cvss':
         return (
           <CvssCalculator value={metrics} onChange={setMetrics} env={env} onEnvChange={setEnv} />
@@ -65,6 +71,9 @@ export function App() {
           </a>
           <a href="#/scenarios" aria-current={current(['scenarios', 'scenario'])}>
             Scenarios
+          </a>
+          <a href="#/recommendations" aria-current={current(['recommendations', 'recommendation'])}>
+            Recommendations
           </a>
           <a href="#/cvss" aria-current={current(['cvss'])}>
             CVSS calculator

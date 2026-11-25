@@ -134,7 +134,8 @@ function OpenMissionDialog(props: {
       onClose(
         result,
         `Imported ${plural(c.projects, 'project')} (${plural(c.findings, 'finding')}, ` +
-          `${plural(c.images, 'image')}, ${plural(c.scenarios, 'scenario')})` +
+          `${plural(c.images, 'image')}, ${plural(c.scenarios, 'scenario')}` +
+          (c.recommendations ? `, ${plural(c.recommendations, 'recommendation')})` : ')') +
           (result.themeRestored ? ' and the slide theme.' : '.'),
       );
     } catch (e) {

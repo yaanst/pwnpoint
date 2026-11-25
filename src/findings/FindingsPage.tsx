@@ -239,7 +239,7 @@ export function FindingsPage({ vault }: { vault: Vault }) {
           <CategoriesDialog
             vault={vault}
             project={project}
-            findings={findings}
+            items={findings}
             onChange={(next) => {
               setProjects(projects.map((p) => (p.id === next.id ? next : p)));
               const codes = allCategories(next.categories).map((c) => c.code);

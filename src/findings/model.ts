@@ -18,6 +18,12 @@ export interface Project {
   categoryCounters?: Record<string, number>;
   /** This project's own categories, after the built-in ones. */
   categories?: Category[];
+  /** Next number for recommendations without a category (REC.01). Missing: 1. */
+  nextRecommendationNumber?: number;
+  /** Next number per recommendation category code (ACC → 3). */
+  recommendationCounters?: Record<string, number>;
+  /** This project's own recommendation categories, after the built-in ones. */
+  recommendationCategories?: Category[];
   /** Next scenario number (SCN.NN). Missing on projects created before scenarios: starts at 1. */
   nextScenarioNumber?: number;
   createdAt: number;

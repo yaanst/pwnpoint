@@ -24,6 +24,28 @@ its own, and findings without a category keep `VLN.NN`. Categories can be mixed 
 - Numbers are never reused, even after a delete or a change of category, so references in
   reports already sent stay valid.
 
+## Recommendations
+
+**Recommendations** (Recommendations page) are remediation actions, separate from findings:
+
+- **References:** `REC.01`, or `REC.ACC.01` with a category. Recommendations have their own
+  categories, each numbered on its own: `ACC` access control, `ARC` architecture, `HAR`
+  hardening, `MON` monitoring and detection, `ORG` organizational, `PAT` patch management, `PHY`
+  physical. **Categories…** adds a project's own codes. Numbers are never reused.
+- **Links to findings:** one recommendation can address several findings, and a finding can
+  have several recommendations. Link them from the recommendation's checklist or from the
+  finding editor (**Linked recommendations**, **+ New recommendation for this finding**).
+  Deleting a finding removes it from its recommendations.
+- **Action plan:** rate complexity, workload, cost and priority from 1 to 3. Effort is
+  complexity + workload + cost:
+
+  | Effort    | Priority 3    | Priority 1–2   |
+  | --------- | ------------- | -------------- |
+  | Below 6   | Quick win     | Side action    |
+  | 6 or more | Heavy project | Can be delayed |
+
+The finding's own **Recommendation** text stays: it is what the finding slide shows.
+
 ## CVSS 3.1
 
 Each finding is scored with the CVSS 3.1 base metrics (or a pasted vector string). The
@@ -138,7 +160,7 @@ Browser storage is not a backup. Save your work to `.pwnp` files:
 - **Open mission file…** (Findings) or **Restore from a file…** (Settings) imports a file. You
   see what it contains first. If a project already exists, keep both (the file is imported as a
   copy) or replace it with the file's version.
-- Files saved by this version (format 3, with scenario ratings) need PwnPoint 0.4 or later; files
+- Files saved by this version (format 4, with recommendations) need PwnPoint 0.4 or later; files
   saved by 0.2 still open.
 - Import is strict: the file is a plain ZIP (`pwnpoint.json`, `data.json`, `images/*.png`, or
   an encrypted `payload.bin`), every record is validated field by field, nothing in it is ever
