@@ -9,6 +9,7 @@ import {
   listProjects,
   saveFinding,
 } from '../findings/repository';
+import { createRecommendation, listRecommendations } from '../recommendations/repository';
 import { findingStep } from '../scenarios/model';
 import { createScenario, listScenarios, saveScenario } from '../scenarios/repository';
 import { DEFAULT_THEME } from '../slides/theme';
@@ -44,7 +45,8 @@ async function seed(vault: Vault, name = 'ACME') {
   );
   const s = await createScenario(vault, p.id);
   await saveScenario(vault, { ...s, title: 'Takeover', steps: [findingStep('st1', f.id)] });
-  return { p, f, s };
+  const r = await createRecommendation(vault, p.id, { category: 'HAR', findingIds: [f.id] });
+  return { p, f, s, r };
 }
 
 /** Saves then re-opens, as the UI does. */
@@ -68,7 +70,13 @@ describe('backup repository', () => {
     const content = await collectMission(vault, { projectId: p.id });
     expect(content.scope).toBe('project');
     expect(content.theme).toBeUndefined();
-    expect(missionCounts(content)).toEqual({ projects: 1, findings: 1, images: 1, scenarios: 1 });
+    expect(missionCounts(content)).toEqual({
+      projects: 1,
+      findings: 1,
+      images: 1,
+      scenarios: 1,
+      recommendations: 1,
+    });
     const all = await collectMission(vault, 'all');
     expect(missionCounts(all).projects).toBe(2);
     expect(all.theme).toBeDefined();
@@ -88,8 +96,10 @@ describe('backup repository', () => {
     const e = first(await listEvidence(target, f.id));
     expect(await getEvidenceBytes(target, e.id)).toEqual(TINY_PNG);
     expect((await listScenarios(target, p.id))[0]?.steps[0]?.findingId).toBe(f.id);
-    // Counters continue: the next finding is VLN.02.
+    expect(first(await listRecommendations(target, p.id)).findingIds).toEqual([f.id]);
+    // Counters continue: the next finding is VLN.02, the next recommendation REC.HAR.02.
     expect((await createFinding(target, p.id)).number).toBe(2);
+    expect((await createRecommendation(target, p.id, { category: 'HAR' })).number).toBe(2);
   });
 
   it('replaces an existing project: new records written, records missing from the file removed', async () => {
@@ -121,6 +131,7 @@ describe('backup repository', () => {
     expect(cf.id).not.toBe(f.id);
     expect((await listEvidence(vault, cf.id)).length).toBe(1);
     expect((await listScenarios(vault, copy.id))[0]?.steps[0]?.findingId).toBe(cf.id);
+    expect(first(await listRecommendations(vault, copy.id)).findingIds).toEqual([cf.id]);
     // The original is untouched.
     expect((await listFindings(vault, p.id)).map((x) => x.id)).toEqual([f.id]);
   });

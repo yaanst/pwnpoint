@@ -5,7 +5,8 @@ import {
   allCategories,
   CATEGORY_CODE,
   type Category,
-  DEFAULT_CATEGORIES,
+  type CategoryKind,
+  DEFAULTS,
   MAX_CATEGORY_NAME,
 } from '../findings/categories';
 import {
@@ -15,6 +16,7 @@ import {
   SEVERITIES,
   STATUSES,
 } from '../findings/model';
+import { isScale3, type Recommendation, type Scale3 } from '../recommendations/model';
 import { type Scenario, type ScenarioStep } from '../scenarios/model';
 import { isRating, LEGACY_LEVELS, type Rating } from '../scenarios/rating';
 import { validateThemeFile } from '../slides/themeStore';
@@ -28,17 +30,18 @@ import type { SlideTheme } from '../slides/theme';
 
 export const MISSION_FORMAT = 'pwnpoint-mission';
 /**
- * Version written. 2 added finding categories, 3 the 5-level scenario rating. Older versions
- * are still read.
+ * Version written. 2 added finding categories, 3 the 5-level scenario rating, 4
+ * recommendations. Older versions are still read.
  */
-export const MISSION_VERSION = 3;
-export const READABLE_VERSIONS: readonly unknown[] = [1, 2, 3];
+export const MISSION_VERSION = 4;
+export const READABLE_VERSIONS: readonly unknown[] = [1, 2, 3, 4];
 
 export const LIMITS = {
   projects: 1_000,
   findings: 20_000,
   evidence: 20_000,
   scenarios: 5_000,
+  recommendations: 10_000,
   categories: 100,
   steps: 200,
   listItems: 1_000,
@@ -56,6 +59,7 @@ export interface ProjectContent {
   findings: Finding[];
   evidence: { meta: Evidence; bytes: Uint8Array<ArrayBuffer> }[];
   scenarios: Scenario[];
+  recommendations: Recommendation[];
 }
 
 export interface MissionContent {
@@ -149,33 +153,61 @@ function project(c: Checker, v: unknown, i: number): Project {
   if (o.nextScenarioNumber !== undefined) {
     p.nextScenarioNumber = c.int(o.nextScenarioNumber, `${where} scenario counter`, 1);
   }
-  if (o.categories !== undefined) {
-    const codes = new Set(DEFAULT_CATEGORIES.map((x) => x.code));
-    p.categories = c
-      .list(o.categories, `${where} categories`, LIMITS.categories)
-      .map((v, j): Category => {
-        const w = `${where} category ${j + 1}`;
-        const cat = c.obj(v, w);
-        const code = categoryCode(c, cat.code, w);
-        if (codes.has(code)) c.fail(`${w} uses the code ${code} twice.`);
-        codes.add(code);
-        return { code, name: c.str(cat.name, `${w} name`, MAX_CATEGORY_NAME).trim() || code };
-      });
-  }
-  if (o.categoryCounters !== undefined) {
-    const counters = c.obj(o.categoryCounters, `${where} category counters`);
-    const entries = Object.entries(counters);
-    if (entries.length > LIMITS.categories * 2) c.fail(`${where} has too many category counters.`);
-    p.categoryCounters = Object.fromEntries(
-      entries
-        .slice(0, LIMITS.categories * 2)
-        .map(([k, v]) => [
-          categoryCode(c, k, `${where} category counter`),
-          c.int(v, `${where} counter of ${k}`, 1),
-        ]),
+  const categories = categoryList(c, o.categories, 'finding', `${where} category`);
+  if (categories) p.categories = categories;
+  const counters = counterMap(c, o.categoryCounters, `${where} category`);
+  if (counters) p.categoryCounters = counters;
+  if (o.nextRecommendationNumber !== undefined) {
+    p.nextRecommendationNumber = c.int(
+      o.nextRecommendationNumber,
+      `${where} recommendation counter`,
+      1,
     );
   }
+  const recCategories = categoryList(
+    c,
+    o.recommendationCategories,
+    'recommendation',
+    `${where} recommendation category`,
+  );
+  if (recCategories) p.recommendationCategories = recCategories;
+  const recCounters = counterMap(c, o.recommendationCounters, `${where} recommendation category`);
+  if (recCounters) p.recommendationCounters = recCounters;
   return p;
+}
+
+/** A project's own categories: valid, unique codes that do not repeat a built-in one. */
+function categoryList(
+  c: Checker,
+  v: unknown,
+  kind: CategoryKind,
+  where: string,
+): Category[] | undefined {
+  if (v === undefined) return undefined;
+  const codes = new Set(DEFAULTS[kind].map((x) => x.code));
+  return c.list(v, `${where} list`, LIMITS.categories).map((item, j): Category => {
+    const w = `${where} ${j + 1}`;
+    const cat = c.obj(item, w);
+    const code = categoryCode(c, cat.code, w);
+    if (codes.has(code)) c.fail(`${w} uses the code ${code} twice.`);
+    codes.add(code);
+    return { code, name: c.str(cat.name, `${w} name`, MAX_CATEGORY_NAME).trim() || code };
+  });
+}
+
+/** Next number per category code. */
+function counterMap(c: Checker, v: unknown, where: string): Record<string, number> | undefined {
+  if (v === undefined) return undefined;
+  const entries = Object.entries(c.obj(v, `${where} counters`));
+  if (entries.length > LIMITS.categories * 2) c.fail(`${where} has too many counters.`);
+  return Object.fromEntries(
+    entries
+      .slice(0, LIMITS.categories * 2)
+      .map(([k, n]) => [
+        categoryCode(c, k, `${where} counter`),
+        c.int(n, `${where} counter of ${k}`, 1),
+      ]),
+  );
 }
 
 function categoryCode(c: Checker, v: unknown, where: string): string {
@@ -269,6 +301,30 @@ function step(c: Checker, v: unknown, where: string): ScenarioStep {
   return s;
 }
 
+function recommendation(c: Checker, v: unknown, i: number): Recommendation {
+  const where = `Recommendation ${i + 1}`;
+  const o = c.obj(v, where);
+  const r: Recommendation = {
+    id: c.id(o.id, where),
+    projectId: c.id(o.projectId, `${where} project`),
+    number: c.int(o.number, `${where} number`, 1),
+    title: c.str(o.title, `${where} title`),
+    description: c.str(o.description, `${where} description`, LIMITS.longText),
+    findingIds: c
+      .list(o.findingIds, `${where} findings`, LIMITS.listItems)
+      .map((id) => c.id(id, `${where} finding`)),
+    createdAt: c.time(o.createdAt, where),
+    updatedAt: c.time(o.updatedAt, where),
+  };
+  if (o.category !== undefined) r.category = categoryCode(c, o.category, where);
+  for (const key of ['complexity', 'workload', 'cost', 'priority'] as const) {
+    if (o[key] === undefined) continue;
+    if (isScale3(o[key])) r[key] = o[key] as Scale3;
+    else c.fail(`${where} ${key} must be 1, 2 or 3.`);
+  }
+  return r;
+}
+
 /** A 1–5 rating; files before version 3 used Critical, High, Medium, Low (5 to 2). */
 function rating(c: Checker, v: unknown, version: unknown, where: string): Rating | undefined {
   if (v === undefined) return undefined;
@@ -350,6 +406,9 @@ export function validateMission(
   const scenarios = c
     .list(data.scenarios, 'Scenarios', LIMITS.scenarios)
     .map((v, i) => scenario(c, v, i, data.version));
+  const recommendations = c
+    .list(data.recommendations ?? [], 'Recommendations', LIMITS.recommendations)
+    .map((v, i) => recommendation(c, v, i));
   if (projects.length === 0) c.fail('The file contains no project.');
 
   // Ids must be unique, and every record must point at something in the file.
@@ -362,6 +421,7 @@ export function validateMission(
   findings.forEach((f, i) => unique(f.id, `Finding ${i + 1}`));
   evidenceList.forEach((e, i) => unique(e.id, `Image ${i + 1}`));
   scenarios.forEach((s, i) => unique(s.id, `Scenario ${i + 1}`));
+  recommendations.forEach((r, i) => unique(r.id, `Recommendation ${i + 1}`));
 
   const projectIds = new Set(projects.map((p) => p.id));
   const findingById = new Map(findings.map((f) => [f.id, f]));
@@ -376,6 +436,24 @@ export function validateMission(
   scenarios.forEach((s, i) => {
     if (!projectIds.has(s.projectId))
       c.fail(`Scenario ${i + 1} belongs to no project in the file.`);
+  });
+  recommendations.forEach((r, i) => {
+    const owner = projectById.get(r.projectId);
+    const where = `Recommendation ${i + 1}`;
+    if (!owner) {
+      c.fail(`${where} belongs to no project in the file.`);
+      return;
+    }
+    const codes = allCategories(owner.recommendationCategories, 'recommendation');
+    if (r.category && !codes.some((x) => x.code === r.category)) {
+      c.fail(`${where} uses the category ${r.category}, which its project does not have.`);
+    }
+    if (r.findingIds.some((id) => findingById.get(id)?.projectId !== r.projectId)) {
+      c.fail(`${where} is linked to a finding that is not in its project.`);
+    }
+    if (new Set(r.findingIds).size !== r.findingIds.length) {
+      c.fail(`${where} is linked to the same finding twice.`);
+    }
   });
   const withBytes: ProjectContent['evidence'] = [];
   evidenceList.forEach((e, i) => {
@@ -420,11 +498,22 @@ export function validateMission(
         nextScenarioNumber: Math.max(p.nextScenarioNumber ?? 1, maxScenario + 1),
       };
       if (Object.keys(counters).length) project.categoryCounters = counters;
+      const ownRecs = recommendations.filter((r) => r.projectId === p.id);
+      const recCounters: Record<string, number> = { ...p.recommendationCounters };
+      let nextRec = p.nextRecommendationNumber ?? 1;
+      for (const r of ownRecs) {
+        if (r.category) {
+          recCounters[r.category] = Math.max(recCounters[r.category] ?? 1, r.number + 1);
+        } else nextRec = Math.max(nextRec, r.number + 1);
+      }
+      if (ownRecs.length || p.nextRecommendationNumber) project.nextRecommendationNumber = nextRec;
+      if (Object.keys(recCounters).length) project.recommendationCounters = recCounters;
       return {
         project,
         findings: own,
         evidence: withBytes.filter((e) => e.meta.projectId === p.id),
         scenarios: ownScenarios,
+        recommendations: ownRecs,
       };
     }),
   };

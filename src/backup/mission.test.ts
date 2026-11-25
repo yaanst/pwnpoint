@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_THEME } from '../slides/theme';
 import { newScenario, findingStep, techniqueStep } from '../scenarios/model';
 import { newFinding } from '../findings/model';
+import { newRecommendation } from '../recommendations/model';
 import { unzipStored, zip } from '../export/zip';
 import { encryptWithPassphrase } from '../storage/crypto';
 import { buildMissionFile, openMissionFile, type OpenedMission } from './mission';
@@ -56,6 +57,14 @@ function sample(): MissionContent {
           },
         ],
         scenarios: [scenario],
+        recommendations: [
+          {
+            ...newRecommendation('r1', 'p1', 1, 1000, 'ACC'),
+            title: 'Use prepared statements',
+            findingIds: ['f1'],
+            priority: 3,
+          },
+        ],
       },
     ],
   };
@@ -90,7 +99,7 @@ describe('mission file', () => {
     expect([...files.keys()]).toEqual(['pwnpoint.json', 'data.json', 'images/e1.png']);
     expect(JSON.parse(dec.decode(files.get('pwnpoint.json')))).toEqual({
       format: 'pwnpoint-mission',
-      version: 3,
+      version: 4,
       encrypted: false,
     });
     const content = ok(openMissionFile(file));
@@ -141,7 +150,7 @@ describe('mission file', () => {
       errors(openMissionFile(zip([{ name: 'pwnpoint.json', data: enc.encode('{}') }]))),
     ).toMatch(/not a PwnPoint mission file/);
     const newer = zip([
-      { name: 'pwnpoint.json', data: enc.encode('{"format":"pwnpoint-mission","version":4}') },
+      { name: 'pwnpoint.json', data: enc.encode('{"format":"pwnpoint-mission","version":5}') },
     ]);
     expect(errors(openMissionFile(newer))).toMatch(/newer version/);
   });
@@ -291,6 +300,46 @@ describe('mission file', () => {
       Object.assign(first(d.scenarios as Record<string, unknown>[]), { impact: 'High' });
     });
     expect(errors(openMissionFile(bad))).toMatch(/Scenario 1 impact must be a whole number from 1/);
+  });
+
+  it('keeps recommendations, repairs their counters and checks their links', async () => {
+    const file = await tampered((d) => {
+      const p = first(d.projects as Record<string, unknown>[]);
+      p.recommendationCategories = [{ code: 'NET', name: 'Network' }];
+      (d.recommendations as Record<string, unknown>[]).push({
+        ...first(d.recommendations as Record<string, unknown>[]),
+        id: 'r2',
+        category: 'NET',
+        number: 4,
+      });
+    });
+    const p = first(ok(openMissionFile(file)).projects);
+    expect(p.recommendations.map((r) => [r.category, r.number, r.findingIds])).toEqual([
+      ['ACC', 1, ['f1']],
+      ['NET', 4, ['f1']],
+    ]);
+    expect(p.project.recommendationCounters).toEqual({ ACC: 2, NET: 5 });
+    expect(first(p.recommendations).priority).toBe(3);
+
+    const bad = await tampered((d) => {
+      Object.assign(first(d.recommendations as Record<string, unknown>[]), {
+        findingIds: ['f1', 'nope'],
+        category: 'NET',
+        cost: 4,
+      });
+    });
+    const text = errors(openMissionFile(bad));
+    expect(text).toMatch(/Recommendation 1 cost must be 1, 2 or 3/);
+    expect(text).toMatch(/category NET, which its project does not have/);
+    expect(text).toMatch(/linked to a finding that is not in its project/);
+  });
+
+  it('reads files without recommendations (before version 4)', async () => {
+    const file = await tampered((d) => {
+      d.version = 3;
+      delete d.recommendations;
+    });
+    expect(first(ok(openMissionFile(file)).projects).recommendations).toEqual([]);
   });
 
   it('keeps valid environmental metrics and refuses invalid ones', async () => {

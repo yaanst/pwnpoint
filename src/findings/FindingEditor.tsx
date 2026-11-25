@@ -3,6 +3,7 @@ import type { Severity } from '../cvss/cvss31';
 import { hasEnvironmental } from '../cvss/environmental';
 import { CvssCalculator } from '../cvss/CvssCalculator';
 import { EvidencePanel } from '../evidence/EvidencePanel';
+import { LinkedRecommendations } from '../recommendations/LinkedRecommendations';
 import { UsedInScenarios } from '../scenarios/UsedInScenarios';
 import { SlidePreview } from '../slides/SlidePreview';
 import type { Vault } from '../storage/vault';
@@ -153,6 +154,7 @@ function FindingEditor({ vault, initial }: { vault: Vault; initial: Finding }) {
           value={f.recommendation}
           onChange={(recommendation) => update({ recommendation })}
         />
+        <LinkedRecommendations vault={vault} finding={f} />
         <LinesField
           id="f-references"
           label="References"

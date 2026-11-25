@@ -114,7 +114,12 @@ when behaviour changes.
   breakers). The graph is drawn on one slide left to right; links that skip columns go round.
   Rating: `rating.ts` (pure: 5-level exploitability and impact, severity matrix, suggestion from the
   findings' CVSS sub-scores; `upgradeScenario` maps older 4-level ratings on read), `RatingFields.tsx`.
-- `src/backup/`: mission files (`.pwnp`, format version 3; versions 1–2 still read). `mission.ts` (stored ZIP; plain or AES-GCM payload under a
+- `src/recommendations/`: remediation actions. `model.ts` (pure: `REC.NN` / `REC.ACC.NN` refs, own
+  categories via `categories.ts` `kind: 'recommendation'`, counters on the project, 1–3 criteria,
+  `quadrantOf` for the action plan), repository (`findingIds` links; `deleteFinding` unlinks),
+  `RecommendationsPage.tsx`, `RecommendationEditor.tsx`, `LinkedRecommendations.tsx` (finding
+  editor). Routes `#/recommendations`, `#/recommendations/<id>`. IndexedDB store added by migration 1 → 2.
+- `src/backup/`: mission files (`.pwnp`, format version 4; versions 1–3 still read). `mission.ts` (stored ZIP; plain or AES-GCM payload under a
   PBKDF2 key, `encryptWithPassphrase` in `crypto.ts`), `validate.ts` (strict field-by-field rebuild,
   limits, cross-references; never trust the file), `repository.ts` (collect, restore with replace /
   copy, re-encode every image before writing), `files.ts` (native save dialog or download),
@@ -127,5 +132,6 @@ when behaviour changes.
 - Accessibility: `tests/e2e/a11y.spec.ts` runs axe-core (dev dependency, injected by the test, never
   shipped) on every page in light and dark mode. Add new pages and dialogs to it.
 - `src/settings/`: Settings panels. `src/ui/router.ts`: hash router (`matchRoute`: `#/findings`,
-  `#/findings/<id>`, `#/scenarios`, `#/scenarios/<id>`, `#/cvss`, `#/settings`).
+  `#/findings/<id>`, `#/scenarios`, `#/scenarios/<id>`, `#/recommendations`,
+  `#/recommendations/<id>`, `#/cvss`, `#/settings`).
 - Pure logic lives in plain `.ts` modules with colocated `*.test.ts` files; UI in `.tsx`.

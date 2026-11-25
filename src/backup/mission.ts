@@ -56,6 +56,7 @@ function innerEntries(content: MissionContent, appVersion: string, now: number):
     findings: content.projects.flatMap((p) => p.findings),
     evidence: content.projects.flatMap((p) => p.evidence.map((e) => e.meta)),
     scenarios: content.projects.flatMap((p) => p.scenarios),
+    recommendations: content.projects.flatMap((p) => p.recommendations),
     theme: content.theme ? themeFileObject(content.theme) : null,
   };
   return [

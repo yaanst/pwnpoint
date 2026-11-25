@@ -1,19 +1,57 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Vault } from '../storage/vault';
-import { allCategories, DEFAULT_CATEGORIES, MAX_CATEGORY_NAME } from './categories';
-import type { Finding, Project } from './model';
+import { allCategories, type CategoryKind, DEFAULTS, MAX_CATEGORY_NAME } from './categories';
+import type { Project } from './model';
 import { addCategory, removeCategory } from './repository';
 
 interface Props {
   vault: Vault;
   project: Project;
-  findings: Finding[];
+  /** The findings or recommendations of the project, to count what uses each code. */
+  items: { category?: string }[];
+  kind?: CategoryKind;
   onChange: (project: Project) => void;
   onClose: () => void;
 }
 
 /** Lists the categories of a project and lets the user add or remove the project's own. */
-export function CategoriesDialog({ vault, project, findings, onChange, onClose }: Props) {
+const TEXT: Record<
+  CategoryKind,
+  {
+    title: string;
+    intro: string;
+    items: string;
+    field: 'categories' | 'recommendationCategories';
+    example: [string, string];
+  }
+> = {
+  finding: {
+    title: 'Finding categories',
+    intro:
+      'A category adds its code to the reference: VLN.NET.01 instead of VLN.01. Each category is numbered on its own. Findings without a category keep VLN.01, VLN.02…',
+    items: 'Findings',
+    field: 'categories',
+    example: ['CLOUD', 'Cloud services'],
+  },
+  recommendation: {
+    title: 'Recommendation categories',
+    intro:
+      'A category adds its code to the reference: REC.ACC.01 instead of REC.01. Each category is numbered on its own. These categories are separate from the finding categories.',
+    items: 'Recommendations',
+    field: 'recommendationCategories',
+    example: ['IAM', 'Identity management'],
+  },
+};
+
+export function CategoriesDialog({
+  vault,
+  project,
+  items,
+  kind = 'finding',
+  onChange,
+  onClose,
+}: Props) {
+  const T = TEXT[kind];
   const ref = useRef<HTMLDialogElement>(null);
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
@@ -22,8 +60,8 @@ export function CategoriesDialog({ vault, project, findings, onChange, onClose }
 
   useEffect(() => ref.current?.showModal(), []);
 
-  const builtIn = new Set(DEFAULT_CATEGORIES.map((c) => c.code));
-  const count = (c: string) => findings.filter((f) => f.category === c).length;
+  const builtIn = new Set(DEFAULTS[kind].map((c) => c.code));
+  const count = (c: string) => items.filter((f) => f.category === c).length;
 
   const run = async (action: () => Promise<Project>, done: string) => {
     try {
@@ -42,7 +80,7 @@ export function CategoriesDialog({ vault, project, findings, onChange, onClose }
     event.preventDefault();
     const upper = code.trim().toUpperCase();
     const added = await run(
-      () => addCategory(vault, project.id, { code: upper, name }),
+      () => addCategory(vault, project.id, { code: upper, name }, kind),
       `${upper} added.`,
     );
     if (added) {
@@ -61,27 +99,23 @@ export function CategoriesDialog({ vault, project, findings, onChange, onClose }
         onClose();
       }}
     >
-      <h2 id="categories-title">Finding categories</h2>
+      <h2 id="categories-title">{T.title}</h2>
       <div class="dialog-body stack">
-        <p>
-          A category adds its code to the reference: <code>VLN.NET.01</code> instead of{' '}
-          <code>VLN.01</code>. Each category is numbered on its own. Findings without a category
-          keep <code>VLN.01</code>, <code>VLN.02</code>…
-        </p>
+        <p>{T.intro}</p>
         <table class="findings-table">
           <caption class="visually-hidden">Categories of {project.name}</caption>
           <thead>
             <tr>
               <th scope="col">Code</th>
               <th scope="col">Name</th>
-              <th scope="col">Findings</th>
+              <th scope="col">{T.items}</th>
               <th scope="col">
                 <span class="visually-hidden">Actions</span>
               </th>
             </tr>
           </thead>
           <tbody>
-            {allCategories(project.categories).map((c) => (
+            {allCategories(project[T.field], kind).map((c) => (
               <tr key={c.code}>
                 <td class="ref">{c.code}</td>
                 <td>{c.name}</td>
@@ -96,7 +130,7 @@ export function CategoriesDialog({ vault, project, findings, onChange, onClose }
                       aria-label={`Remove category ${c.code}`}
                       onClick={() =>
                         void run(
-                          () => removeCategory(vault, project.id, c.code),
+                          () => removeCategory(vault, project.id, c.code, kind),
                           `${c.code} removed.`,
                         )
                       }
@@ -121,7 +155,7 @@ export function CategoriesDialog({ vault, project, findings, onChange, onClose }
               maxLength={6}
               autocomplete="off"
               spellcheck={false}
-              placeholder="CLOUD"
+              placeholder={T.example[0]}
               aria-describedby="category-code-hint"
               value={code}
               onInput={(e) => setCode(e.currentTarget.value.toUpperCase())}
@@ -131,7 +165,7 @@ export function CategoriesDialog({ vault, project, findings, onChange, onClose }
               id="category-name"
               type="text"
               maxLength={MAX_CATEGORY_NAME}
-              placeholder="Cloud services"
+              placeholder={T.example[1]}
               value={name}
               onInput={(e) => setName(e.currentTarget.value)}
             />
