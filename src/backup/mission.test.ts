@@ -100,7 +100,7 @@ describe('mission file', () => {
     expect([...files.keys()]).toEqual(['pwnpoint.json', 'data.json', 'images/e1.png']);
     expect(JSON.parse(dec.decode(files.get('pwnpoint.json')))).toEqual({
       format: 'pwnpoint-mission',
-      version: 5,
+      version: 6,
       encrypted: false,
     });
     const content = ok(openMissionFile(file));
@@ -151,7 +151,7 @@ describe('mission file', () => {
       errors(openMissionFile(zip([{ name: 'pwnpoint.json', data: enc.encode('{}') }]))),
     ).toMatch(/not a PwnPoint mission file/);
     const newer = zip([
-      { name: 'pwnpoint.json', data: enc.encode('{"format":"pwnpoint-mission","version":6}') },
+      { name: 'pwnpoint.json', data: enc.encode('{"format":"pwnpoint-mission","version":7}') },
     ]);
     expect(errors(openMissionFile(newer))).toMatch(/newer version/);
   });

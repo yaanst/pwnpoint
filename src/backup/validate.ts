@@ -32,10 +32,11 @@ import type { SlideTheme } from '../slides/theme';
 export const MISSION_FORMAT = 'pwnpoint-mission';
 /**
  * Version written. 2 added finding categories, 3 the 5-level scenario rating, 4
- * recommendations, 5 mission details. Older versions are still read.
+ * recommendations, 5 mission details, 6 dropped the finding's free-text recommendation (older
+ * files may still carry it: it is ignored). Older versions are still read.
  */
-export const MISSION_VERSION = 5;
-export const READABLE_VERSIONS: readonly unknown[] = [1, 2, 3, 4, 5];
+export const MISSION_VERSION = 6;
+export const READABLE_VERSIONS: readonly unknown[] = [1, 2, 3, 4, 5, 6];
 
 export const LIMITS = {
   projects: 1_000,
@@ -269,7 +270,6 @@ function finding(c: Checker, v: unknown, i: number): Finding {
     description: text('description', 'description'),
     impact: text('impact', 'impact'),
     steps: c.texts(o.steps, `${where} step`),
-    recommendation: text('recommendation', 'recommendation'),
     references: c.texts(o.references, `${where} reference`),
     status: c.oneOf<FindingStatus>(o.status, STATUSES, `${where} status`),
     cvss: cvss(c, o.cvss, where),
@@ -360,7 +360,7 @@ function recommendation(c: Checker, v: unknown, i: number): Recommendation {
 function rating(c: Checker, v: unknown, version: unknown, where: string): Rating | undefined {
   if (v === undefined) return undefined;
   if (isRating(v)) return v;
-  if (version !== MISSION_VERSION && typeof v === 'string' && LEGACY_LEVELS[v]) {
+  if ((version === 1 || version === 2) && typeof v === 'string' && LEGACY_LEVELS[v]) {
     return LEGACY_LEVELS[v];
   }
   c.fail(`${where} must be a whole number from 1 to 5.`);

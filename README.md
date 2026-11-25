@@ -46,7 +46,10 @@ its own, and findings without a category keep `VLN.NN`. Categories can be mixed 
   | Below 6   | Quick win     | Side action    |
   | 6 or more | Heavy project | Can be delayed |
 
-The finding's own **Recommendation** text stays: it is what the finding slide shows.
+Findings have no free-text recommendation: their slide shows a table of the linked
+recommendations (reference, category, title, description), highest priority first. Rows that do
+not fit continue on the next slide. Text typed in the old **Recommendation** box (before 0.5) is
+no longer shown or saved.
 
 ## Report details and executive summary
 
@@ -148,7 +151,7 @@ context, a rating and ordered steps. A step is a finding (pick it by typing
 its reference or title) or a free technique with an optional MITRE ATT&CK id. Each step says
 what the attacker gains, can carry a note, and can be marked as a **chain breaker**: fixing it
 stops the attack. Chain breakers are listed under **Break the chain**, with the step's note or,
-if empty, the finding's recommendation.
+if empty, the finding's linked recommendations.
 
 Reorder steps by dragging their handle, with the ↑/↓ buttons, or with Alt+↑/↓. A finding's
 editor shows the scenarios that use it; if a finding is deleted, its steps stay as a visible

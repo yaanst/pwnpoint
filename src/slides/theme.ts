@@ -93,6 +93,13 @@ export interface SlideLabels {
   logo: string;
   steps: string;
   references: string;
+  /** Heading of a finding's linked recommendations (Markdown). */
+  recommendations: string;
+  /** Recommendations table columns. */
+  reference: string;
+  category: string;
+  /** Title suffix of a slide that continues the previous one. */
+  continued: string;
   evidence: string;
   severityLabel: string;
   overrideReason: string;
@@ -141,6 +148,10 @@ export const LABELS: Record<SlideLanguage, SlideLabels> = {
     logo: 'Logo',
     steps: 'Steps to reproduce',
     references: 'References',
+    recommendations: 'Recommendations',
+    reference: 'Reference',
+    category: 'Category',
+    continued: '(continued)',
     evidence: 'Evidence',
     severityLabel: 'Severity',
     overrideReason: 'Severity adjusted',
@@ -191,6 +202,10 @@ export const LABELS: Record<SlideLanguage, SlideLabels> = {
     logo: 'Logo',
     steps: 'Étapes de reproduction',
     references: 'Références',
+    recommendations: 'Recommandations',
+    reference: 'Référence',
+    category: 'Catégorie',
+    continued: '(suite)',
     evidence: 'Preuves',
     severityLabel: 'Sévérité',
     overrideReason: 'Sévérité ajustée',

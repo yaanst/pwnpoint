@@ -2,7 +2,14 @@ import { getEvidenceBytes, listEvidence } from '../evidence/repository';
 import { type Finding, type Project, sortForReport } from '../findings/model';
 import { layoutScenario, type ScenarioLayout } from '../scenarios/layout';
 import { type Scenario, scenarioRef } from '../scenarios/model';
-import { buildCoverSlide, buildFindingSlide, type Slide } from '../slides/layout';
+import { listProjects } from '../findings/repository';
+import {
+  type Recommendation,
+  type RecommendationRow,
+  recommendationRows,
+} from '../recommendations/model';
+import { listRecommendations } from '../recommendations/repository';
+import { buildCoverSlide, buildFindingSlides, type Slide } from '../slides/layout';
 import type { SlideTheme } from '../slides/theme';
 import type { Measure } from '../slides/wrap';
 import type { Vault } from '../storage/vault';
@@ -13,6 +20,8 @@ export interface SlideBundle {
   images: Record<string, Uint8Array<ArrayBuffer>>;
   /** Evidence captions per finding id, in order (for Markdown). */
   captions: Map<string, string[]>;
+  /** Linked recommendations per finding id, highest priority first (for Markdown). */
+  recommendations: Map<string, RecommendationRow[]>;
 }
 
 async function addFinding(
@@ -21,7 +30,11 @@ async function addFinding(
   finding: Finding,
   theme: SlideTheme,
   measure: Measure,
+  project: Project | undefined,
+  recs: Recommendation[],
 ) {
+  const rows = recommendationRows(finding.id, recs, project);
+  bundle.recommendations.set(finding.id, rows);
   const evidence = await listEvidence(vault, finding.id);
   bundle.captions.set(
     finding.id,
@@ -31,13 +44,14 @@ async function addFinding(
     const bytes = await getEvidenceBytes(vault, e.id);
     if (bytes) bundle.images[e.id] = bytes;
   }
-  bundle.slides.push(buildFindingSlide(finding, evidence, theme, measure));
+  bundle.slides.push(...buildFindingSlides(finding, evidence, theme, measure, rows));
 }
 
 const emptyBundle = (theme: SlideTheme): SlideBundle => ({
   slides: [],
   images: theme.logo ? { logo: theme.logo.bytes } : {},
   captions: new Map(),
+  recommendations: new Map(),
 });
 
 /** One finding's slide with its images. */
@@ -48,7 +62,9 @@ export async function findingBundle(
   measure: Measure,
 ): Promise<SlideBundle> {
   const bundle = emptyBundle(theme);
-  await addFinding(bundle, vault, finding, theme, measure);
+  const project = (await listProjects(vault)).find((p) => p.id === finding.projectId);
+  const recs = await listRecommendations(vault, finding.projectId);
+  await addFinding(bundle, vault, finding, theme, measure, project, recs);
   return bundle;
 }
 
@@ -65,19 +81,20 @@ export async function projectBundle(
   date: string,
   scenarios: Scenario[] = [],
   allFindings: Finding[] = findings,
-): Promise<SlideBundle & { ordered: Finding[]; skipped: string[] }> {
+): Promise<SlideBundle & { ordered: Finding[]; skipped: string[]; recs: Recommendation[] }> {
   const ordered = sortForReport(findings);
   const bundle = emptyBundle(theme);
+  const recs = await listRecommendations(vault, project.id);
   bundle.slides.push(buildCoverSlide(project.name, date, ordered.length, theme, measure));
-  for (const f of ordered) await addFinding(bundle, vault, f, theme, measure);
+  for (const f of ordered) await addFinding(bundle, vault, f, theme, measure, project, recs);
   const byId = new Map(allFindings.map((f) => [f.id, f]));
   const skipped: string[] = [];
   for (const s of scenarios) {
-    const layout = layoutScenario(s, byId, theme, measure);
+    const layout = layoutScenario(s, byId, theme, measure, recs);
     if (layout.blocked) skipped.push(scenarioRef(s.number));
     else bundle.slides.push(...layout.slides);
   }
-  return { ...bundle, ordered, skipped };
+  return { ...bundle, ordered, skipped, recs };
 }
 
 /** One scenario's slides (one or two) with the logo. */
@@ -86,8 +103,10 @@ export function scenarioBundle(
   findings: Finding[],
   theme: SlideTheme,
   measure: Measure,
+  recs: Recommendation[] = [],
 ): SlideBundle & { layout: ScenarioLayout } {
-  const layout = layoutScenario(scenario, new Map(findings.map((f) => [f.id, f])), theme, measure);
+  const byId = new Map(findings.map((f) => [f.id, f]));
+  const layout = layoutScenario(scenario, byId, theme, measure, recs);
   return { ...emptyBundle(theme), slides: layout.slides, layout };
 }
 

@@ -12,7 +12,7 @@ async function createProject(page: Page) {
 async function addFinding(page: Page, title: string, impact: 'High' | 'Low') {
   await page.getByRole('button', { name: '+ New finding' }).click();
   await page.getByLabel('Title', { exact: true }).fill(title);
-  await page.getByLabel('Recommendation').fill('Fix **it** now.');
+  await page.getByLabel('Impact', { exact: true }).fill('Fix **it** now.');
   await page
     .getByRole('radiogroup', { name: /Confidentiality/ })
     .getByRole('radio', { name: new RegExp(impact) })

@@ -1,6 +1,16 @@
 import { effectiveSeverity, type Finding, findingRef, findingCvss } from '../findings/model';
+import type { RecommendationRow } from '../recommendations/model';
 import { type Inline, parseMarkdownLite } from '../text/markdownLite';
+import { contrastRatio } from '../util/contrast';
 import { LABELS, type SlideTheme } from './theme';
+import {
+  type Cell,
+  drawTable,
+  fitRows,
+  recommendationCells,
+  recommendationWidths,
+  type TableStyle,
+} from './table';
 import { type FontSpec, type Line, type Measure, type TextRun, wrapRuns } from './wrap';
 
 /** 16:9 widescreen, in inches (PowerPoint's default 13.333 × 7.5 in). */
@@ -195,12 +205,45 @@ export function vectorLines(vector: string): string[] {
   return env ? [base, env] : [base];
 }
 
+/** The finding's slide alone (theme preview, tests): continuation slides are left out. */
 export function buildFindingSlide(
   finding: Finding,
   evidence: EvidenceRef[],
   theme: SlideTheme,
   measure: Measure,
+  recs: RecommendationRow[] = [],
 ): Slide {
+  const [first] = buildFindingSlides(finding, evidence, theme, measure, recs);
+  if (!first) throw new Error('No slide');
+  return first;
+}
+
+/** Lighter shade of a #rrggbb colour: `amount` 0 (unchanged) to 1 (white). */
+function tint(hex: string, amount: number): string {
+  const ch = [1, 3, 5].map((i) => {
+    const v = parseInt(hex.slice(i, i + 2), 16);
+    return Math.round(v + (255 - v) * amount)
+      .toString(16)
+      .padStart(2, '0');
+  });
+  return `#${ch.join('')}`;
+}
+
+/** Top of the recommendations table when it is tall: the text and images keep the rest. */
+const MIN_TABLE_TOP = 4.3;
+const TOO_LONG = 'A linked recommendation is too long for one slide. Shorten its description.';
+
+/**
+ * The finding's slide, then continuation slides for the linked recommendations that do not fit
+ * (highest priority first, so the most important stay on the finding's slide).
+ */
+export function buildFindingSlides(
+  finding: Finding,
+  evidence: EvidenceRef[],
+  theme: SlideTheme,
+  measure: Measure,
+  recs: RecommendationRow[] = [],
+): Slide[] {
   const L = LABELS[theme.language];
   const c = theme.colors;
   const sizes = {
@@ -336,9 +379,40 @@ export function buildFindingSlide(
     widthPt: 1.5,
   });
 
-  // Body: text sections on the left, up to two evidence images on the right.
+  // Recommendations table at the bottom; rows that do not fit go on continuation slides.
   const bodyTop = 1.95;
-  const bodyBottom = SLIDE_H - 0.8;
+  const pageBottom = SLIDE_H - 0.8;
+  const tableStyle: TableStyle = {
+    measure,
+    ...fonts,
+    minFontPt: theme.minFontPt,
+    fill: tint(c.accent, 0.88),
+    color: c.text,
+  };
+  const widths = recommendationWidths(right - MARGIN);
+  const head: Cell[][] = [
+    [L.reference, L.category, L.recommendation, L.description].map((text) => ({
+      text,
+      fill: c.accent,
+      color: contrastRatio(c.accent, '#ffffff') >= 4.5 ? '#ffffff' : c.text,
+      bold: true,
+      align: 'center' as const,
+    })),
+  ];
+  let rest = recommendationCells(recs);
+  let bodyBottom = pageBottom;
+  if (rest.length) {
+    const opts = { maxBottom: pageBottom };
+    const whole = drawTable(tableStyle, MARGIN, 0, widths, [...head, ...rest], opts);
+    const tableTop = Math.max(MIN_TABLE_TOP, pageBottom - whole.bottom);
+    const { first, taken } = fitRows(tableStyle, MARGIN, tableTop, widths, head, rest, opts);
+    elements.push(...first.elements);
+    if (first.overflow) warnings.push(TOO_LONG);
+    rest = rest.slice(taken);
+    bodyBottom = tableTop - 0.2;
+  }
+
+  // Body: text sections on the left, up to two evidence images on the right.
   const images = evidence.slice(0, 2);
   if (evidence.length > 2) {
     warnings.push(
@@ -349,7 +423,6 @@ export function buildFindingSlide(
   const sections: [string, string][] = [
     [L.description, finding.description],
     [L.impact, finding.impact],
-    [L.recommendation, finding.recommendation],
   ];
   if (finding.assets.length)
     sections.unshift([L.assets, finding.assets.map((a) => `- ${a}`).join('\n')]);
@@ -454,7 +527,71 @@ export function buildFindingSlide(
     });
   }
 
-  // Footer.
+  elements.push(...footer(theme, measure));
+  const slides: Slide[] = [
+    { width: SLIDE_W, height: SLIDE_H, background: c.background, elements, warnings },
+  ];
+
+  // Continuation slides: the reference and title, then the remaining recommendations.
+  const contTitle = `${finding.title.trim() || L.untitled} ${L.continued}`;
+  while (rest.length) {
+    const { first, taken } = fitRows(tableStyle, MARGIN, bodyTop, widths, head, rest, {
+      maxBottom: pageBottom,
+    });
+    if (first.overflow && !warnings.includes(TOO_LONG)) warnings.push(TOO_LONG);
+    rest = rest.slice(taken);
+    slides.push({
+      width: SLIDE_W,
+      height: SLIDE_H,
+      background: c.background,
+      elements: [
+        textBox(
+          [{ runs: [{ text: findingRef(finding) }] }],
+          {
+            role: 'ref',
+            x: MARGIN,
+            y: 0.35,
+            w: 3,
+            h: 0.3,
+            sizePt: sizes.ref,
+            color: c.muted,
+            ...heading,
+          },
+          measure,
+        ),
+        textBox(
+          [{ runs: [{ text: contTitle }] }],
+          {
+            role: 'title',
+            x: MARGIN,
+            y: 0.65,
+            w: right - MARGIN,
+            h: 1.0,
+            sizePt: sizes.title,
+            color: c.text,
+            bold: true,
+            ...heading,
+          },
+          measure,
+        ),
+        { kind: 'line', x1: MARGIN, y1: 1.75, x2: right, y2: 1.75, color: c.accent, widthPt: 1.5 },
+        ...first.elements,
+        ...footer(theme, measure),
+      ],
+      warnings: [],
+    });
+  }
+  return slides;
+}
+
+/** Footer text on the left, logo on the right. */
+function footer(theme: SlideTheme, measure: Measure): SlideElement[] {
+  const L = LABELS[theme.language];
+  const c = theme.colors;
+  const right = SLIDE_W - MARGIN;
+  const small = Math.max(theme.minFontPt, 10);
+  const fonts = { family: theme.bodyFont, monoFamily: theme.monoFont };
+  const elements: SlideElement[] = [];
   elements.push(
     textBox(
       [{ runs: [{ text: theme.footerText }] }],
@@ -464,7 +601,7 @@ export function buildFindingSlide(
         y: SLIDE_H - 0.5,
         w: 8,
         h: 0.3,
-        sizePt: sizes.small,
+        sizePt: small,
         color: c.muted,
         ...fonts,
       },
@@ -485,7 +622,7 @@ export function buildFindingSlide(
     });
   }
 
-  return { width: SLIDE_W, height: SLIDE_H, background: c.background, elements, warnings };
+  return elements;
 }
 
 /** Deck cover: project name, subtitle, date and finding count. */

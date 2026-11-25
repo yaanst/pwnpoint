@@ -1,6 +1,7 @@
 import { canBypass, isLinear, successors } from './graph';
 import type { Severity } from '../cvss/cvss31';
 import { effectiveSeverity, type Finding, findingRef } from '../findings/model';
+import { type Recommendation, recommendationRef, sortForPlan } from '../recommendations/model';
 import { LEGACY_LEVELS, isRating, type Rating } from './rating';
 
 export interface ScenarioStep {
@@ -113,11 +114,18 @@ export interface StepView {
   severity?: Severity;
   /** The step points at a finding that no longer exists. */
   missing: boolean;
-  /** For a finding: its recommendation (used for "Break the chain" when the note is empty). */
+  /**
+   * For a finding: its linked recommendations, "REC.ACC.01 Title; …" (used for "Break the chain"
+   * when the note is empty).
+   */
   recommendation: string;
 }
 
-export function stepView(step: ScenarioStep, findings: Map<string, Finding>): StepView {
+export function stepView(
+  step: ScenarioStep,
+  findings: Map<string, Finding>,
+  recs: Recommendation[] = [],
+): StepView {
   if (step.kind === 'technique') {
     return {
       tag: step.mitreId?.trim() ?? '',
@@ -133,7 +141,9 @@ export function stepView(step: ScenarioStep, findings: Map<string, Finding>): St
     title: f.title.trim(),
     severity: effectiveSeverity(f),
     missing: false,
-    recommendation: f.recommendation,
+    recommendation: sortForPlan(recs.filter((r) => r.findingIds.includes(f.id)))
+      .map((r) => [recommendationRef(r), r.title.trim()].filter(Boolean).join(' '))
+      .join('; '),
   };
 }
 

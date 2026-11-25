@@ -79,10 +79,12 @@ export function ProjectExport({
           bundle.ordered.map((finding) => ({
             finding,
             captions: bundle.captions.get(finding.id) ?? [],
+            recommendations: bundle.recommendations.get(finding.id) ?? [],
           })),
           theme.language,
           scenarios,
           new Map(findings.map((f) => [f.id, f])),
+          bundle.recs,
         );
         if (action === 'md-copy') {
           await copyText(md);

@@ -1,4 +1,5 @@
 import type { Finding } from '../findings/model';
+import type { Recommendation } from '../recommendations/model';
 import {
   fitImage,
   LINE_HEIGHT,
@@ -208,8 +209,9 @@ export function layoutScenario(
   findings: Map<string, Finding>,
   theme: SlideTheme,
   measure: Measure,
+  recs: Recommendation[] = [],
 ): ScenarioLayout {
-  const views = scenario.steps.map((s) => stepView(s, findings));
+  const views = scenario.steps.map((s) => stepView(s, findings, recs));
   const texts = nodeTexts(scenario, views, theme);
   const sizes = fontSizes(theme);
   const succ = successors(scenario.steps);

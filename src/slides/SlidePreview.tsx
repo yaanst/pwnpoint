@@ -4,7 +4,10 @@ import { FindingExport } from '../export/FindingExport';
 import type { Finding } from '../findings/model';
 import type { Vault } from '../storage/vault';
 import { on } from '../ui/events';
-import { buildFindingSlide } from './layout';
+import { listProjects } from '../findings/repository';
+import { type RecommendationRow, recommendationRows } from '../recommendations/model';
+import { listRecommendations } from '../recommendations/repository';
+import { buildFindingSlides } from './layout';
 import { canvasMeasure } from './measure';
 import { SlideSvg } from './SlideSvg';
 import type { SlideTheme } from './theme';
@@ -15,38 +18,64 @@ import { useSlideImages } from './useSlideImages';
 export function SlidePreview({ vault, finding }: { vault: Vault; finding: Finding }) {
   const [theme, setTheme] = useState<SlideTheme | null>(null);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
+  const [recs, setRecs] = useState<RecommendationRow[]>([]);
 
   useEffect(() => {
     const loadEvidence = () => void listEvidence(vault, finding.id).then(setEvidence);
     const reloadTheme = () => void loadTheme(vault).then(setTheme);
+    const loadRecs = () =>
+      void Promise.all([listProjects(vault), listRecommendations(vault, finding.projectId)]).then(
+        ([projects, list]) =>
+          setRecs(
+            recommendationRows(
+              finding.id,
+              list,
+              projects.find((p) => p.id === finding.projectId),
+            ),
+          ),
+      );
     loadEvidence();
     reloadTheme();
-    const offE = on('evidence-changed', loadEvidence);
-    const offT = on('theme-changed', reloadTheme);
-    return () => {
-      offE();
-      offT();
-    };
-  }, [vault, finding.id]);
+    loadRecs();
+    const offs = [
+      on('evidence-changed', loadEvidence),
+      on('theme-changed', reloadTheme),
+      on('recommendations-changed', loadRecs),
+    ];
+    return () => offs.forEach((off) => off());
+  }, [vault, finding.id, finding.projectId]);
 
   const urls = useSlideImages(vault, evidence.slice(0, 2), theme);
-  const slide = useMemo(
-    () => (theme ? buildFindingSlide(finding, evidence, theme, canvasMeasure) : null),
-    [finding, evidence, theme],
+  const slides = useMemo(
+    () => (theme ? buildFindingSlides(finding, evidence, theme, canvasMeasure, recs) : null),
+    [finding, evidence, theme, recs],
   );
+  const slide = slides?.[0];
 
   return (
     <section class="slide-preview" aria-labelledby="slide-preview-title">
       <h3 id="slide-preview-title">Slide preview</h3>
       {slide && theme ? (
         <>
-          <div class="slide-frame">
-            <SlideSvg
-              slide={slide}
-              images={urls}
-              label={`Slide preview of ${finding.title || 'this finding'}`}
-            />
-          </div>
+          {slides?.map((s, i) => (
+            <div class="slide-frame" key={i}>
+              <SlideSvg
+                slide={s}
+                images={urls}
+                label={
+                  i === 0
+                    ? `Slide preview of ${finding.title || 'this finding'}`
+                    : `Continuation slide ${i + 1} of ${finding.title || 'this finding'}`
+                }
+              />
+            </div>
+          ))}
+          {slides && slides.length > 1 && (
+            <p class="muted small-text">
+              The recommendations that do not fit continue on {slides.length - 1} more slide
+              {slides.length > 2 ? 's' : ''}, highest priority first.
+            </p>
+          )}
           {slide.warnings.length > 0 ? (
             <div role="status" data-testid="slide-warnings">
               <ul class="errors slide-warnings">

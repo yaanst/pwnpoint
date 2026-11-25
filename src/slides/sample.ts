@@ -8,7 +8,5 @@ export const SAMPLE_FINDING: Finding = {
   description:
     'The `q` parameter is concatenated into a SQL query. An **unauthenticated** attacker can read the whole database.',
   impact: '- Theft of customer personal data\n- Access to password hashes',
-  recommendation:
-    'Use **prepared statements** for every query and apply least privilege to the database account.',
   cvss: { AV: 'N', AC: 'L', PR: 'N', UI: 'N', S: 'U', C: 'H', I: 'L', A: 'N' },
 };

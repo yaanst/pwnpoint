@@ -150,12 +150,21 @@ export async function saveFinding(
   return saved;
 }
 
-export function getFinding(vault: Vault, id: string): Promise<Finding | undefined> {
-  return vault.get<Finding>('findings', id);
+/** Findings saved before 0.5 carry a free-text `recommendation`: it is dropped on read. */
+function current(f: Finding): Finding {
+  if (!('recommendation' in f)) return f;
+  const copy: Partial<Record<string, unknown>> & Finding = { ...f };
+  delete copy.recommendation;
+  return copy;
+}
+
+export async function getFinding(vault: Vault, id: string): Promise<Finding | undefined> {
+  const f = await vault.get<Finding>('findings', id);
+  return f && current(f);
 }
 
 export async function listFindings(vault: Vault, projectId?: string): Promise<Finding[]> {
-  return (await vault.list<Finding>('findings', projectId)).map((r) => r.value);
+  return (await vault.list<Finding>('findings', projectId)).map((r) => current(r.value));
 }
 
 export async function duplicateFinding(

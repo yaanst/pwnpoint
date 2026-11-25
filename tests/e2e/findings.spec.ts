@@ -29,7 +29,6 @@ test('creates a project and a finding, edits every field, and keeps it after a r
   await page.getByRole('textbox', { name: 'Step 2' }).fill('Crack offline');
   await page.getByRole('button', { name: 'Move step 2 up' }).click();
   await expect(page.getByRole('textbox', { name: 'Step 1' })).toHaveValue('Crack offline');
-  await page.getByLabel('Recommendation').fill('Use gMSA accounts.');
   await page.getByLabel('References').fill('https://attack.mitre.org/techniques/T1558/003/');
   for (const metric of ['Confidentiality', 'Integrity', 'Availability']) {
     await page
