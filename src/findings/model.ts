@@ -1,6 +1,7 @@
 import type { BaseMetrics, Severity } from '../cvss/cvss31';
 import { type CvssResult, cvssResult, type EnvMetrics } from '../cvss/environmental';
 import { isEnabled } from '../flags';
+import type { MissionDetails } from '../report/mission';
 import type { Category } from './categories';
 
 export const SEVERITIES: readonly Severity[] = ['Critical', 'High', 'Medium', 'Low', 'None'];
@@ -24,6 +25,8 @@ export interface Project {
   recommendationCounters?: Record<string, number>;
   /** This project's own recommendation categories, after the built-in ones. */
   recommendationCategories?: Category[];
+  /** Report details and executive summary. Missing until the auditor fills them in. */
+  mission?: MissionDetails;
   /** Next scenario number (SCN.NN). Missing on projects created before scenarios: starts at 1. */
   nextScenarioNumber?: number;
   createdAt: number;

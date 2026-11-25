@@ -46,6 +46,27 @@ its own, and findings without a category keep `VLN.NN`. Categories can be mixed 
 
 The finding's own **Recommendation** text stays: it is what the finding slide shows.
 
+## Report details and executive summary
+
+The **Report** page holds what the report's first slides need, per project:
+
+- **Assessment details:** client, product or system, first and last day, report version, lead
+  auditor, auditors, assessment type, scope, infrastructure type and comments.
+- **Executive summary:** strengths, areas of improvement, and the **security status**. The
+  status is set by the worst rated attack scenario (unrated ones are listed and not counted):
+
+  | Worst scenario | Security status       |
+  | -------------- | --------------------- |
+  | None or Minor  | Satisfactory          |
+  | Moderate       | Pass                  |
+  | Major          | Improvements required |
+  | Severe         | Unsatisfactory        |
+
+  You explain it in one sentence: "Customer portal's security level is Improvements required,
+  as …".
+
+The page lists what is still missing before the report.
+
 ## CVSS 3.1
 
 Each finding is scored with the CVSS 3.1 base metrics (or a pasted vector string). The
@@ -160,7 +181,7 @@ Browser storage is not a backup. Save your work to `.pwnp` files:
 - **Open mission file…** (Findings) or **Restore from a file…** (Settings) imports a file. You
   see what it contains first. If a project already exists, keep both (the file is imported as a
   copy) or replace it with the file's version.
-- Files saved by this version (format 4, with recommendations) need PwnPoint 0.4 or later; files
+- Files saved by this version (format 5, with report details) need PwnPoint 0.4 or later; files
   saved by 0.2 still open.
 - Import is strict: the file is a plain ZIP (`pwnpoint.json`, `data.json`, `images/*.png`, or
   an encrypted `payload.bin`), every record is validated field by field, nothing in it is ever

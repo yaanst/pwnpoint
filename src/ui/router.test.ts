@@ -24,6 +24,7 @@ describe('matchRoute', () => {
     ['/recommendations/r-1/x', { name: 'not-found' }],
     ['/toString/x', { name: 'not-found' }],
     ['/scenarios/%E0%A4%A', { name: 'not-found' }],
+    ['/report', { name: 'report' }],
     ['/cvss', { name: 'cvss' }],
     ['/settings', { name: 'settings' }],
     ['/findings/a/b', { name: 'not-found' }],

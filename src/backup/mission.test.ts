@@ -3,6 +3,7 @@ import { DEFAULT_THEME } from '../slides/theme';
 import { newScenario, findingStep, techniqueStep } from '../scenarios/model';
 import { newFinding } from '../findings/model';
 import { newRecommendation } from '../recommendations/model';
+import { EMPTY_MISSION } from '../report/mission';
 import { unzipStored, zip } from '../export/zip';
 import { encryptWithPassphrase } from '../storage/crypto';
 import { buildMissionFile, openMissionFile, type OpenedMission } from './mission';
@@ -99,7 +100,7 @@ describe('mission file', () => {
     expect([...files.keys()]).toEqual(['pwnpoint.json', 'data.json', 'images/e1.png']);
     expect(JSON.parse(dec.decode(files.get('pwnpoint.json')))).toEqual({
       format: 'pwnpoint-mission',
-      version: 4,
+      version: 5,
       encrypted: false,
     });
     const content = ok(openMissionFile(file));
@@ -150,7 +151,7 @@ describe('mission file', () => {
       errors(openMissionFile(zip([{ name: 'pwnpoint.json', data: enc.encode('{}') }]))),
     ).toMatch(/not a PwnPoint mission file/);
     const newer = zip([
-      { name: 'pwnpoint.json', data: enc.encode('{"format":"pwnpoint-mission","version":5}') },
+      { name: 'pwnpoint.json', data: enc.encode('{"format":"pwnpoint-mission","version":6}') },
     ]);
     expect(errors(openMissionFile(newer))).toMatch(/newer version/);
   });
@@ -332,6 +333,33 @@ describe('mission file', () => {
     expect(text).toMatch(/Recommendation 1 cost must be 1, 2 or 3/);
     expect(text).toMatch(/category NET, which its project does not have/);
     expect(text).toMatch(/linked to a finding that is not in its project/);
+  });
+
+  it('keeps mission details and refuses malformed ones', async () => {
+    const details = {
+      ...EMPTY_MISSION,
+      client: 'ACME',
+      product: 'Portal',
+      from: '2026-10-12',
+      to: '2026-10-16',
+      auditors: ['A. Auditor'],
+      strengths: ['MFA everywhere'],
+      securityLevelReason: 'one major scenario was found',
+    };
+    const file = await tampered((d) => {
+      first(d.projects as Record<string, unknown>[]).mission = { ...details, extra: 'dropped' };
+    });
+    expect(first(ok(openMissionFile(file)).projects).project.mission).toEqual(details);
+
+    const bad = await tampered((d) => {
+      first(d.projects as Record<string, unknown>[]).mission = {
+        from: '12/10/2026',
+        strengths: 'not a list',
+      };
+    });
+    const text = errors(openMissionFile(bad));
+    expect(text).toMatch(/Project 1 details: first day must be a date/);
+    expect(text).toMatch(/Project 1 details: strength must be a list/);
   });
 
   it('reads files without recommendations (before version 4)', async () => {
