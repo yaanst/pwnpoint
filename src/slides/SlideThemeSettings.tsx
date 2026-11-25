@@ -11,6 +11,10 @@ import { canvasMeasure } from './measure';
 import { SAMPLE_FINDING } from './sample';
 import { SlideSvg } from './SlideSvg';
 import { DEFAULT_THEME, LABELS, safeFontName, type SlideTheme } from './theme';
+import { canvasReencode } from '../backup/files';
+import { reencodeTheme } from '../backup/repository';
+import { isEnabled } from '../flags';
+import { ReportStyleFields } from './ReportStyleFields';
 import { exportTheme, importTheme, loadTheme, saveTheme } from './themeStore';
 import { useSlideImages } from './useSlideImages';
 
@@ -61,6 +65,8 @@ export function SlideThemeSettings({ vault }: { vault: Vault }) {
   if (!theme || !slide) return <p aria-busy="true">Loading…</p>;
 
   const update = (next: SlideTheme, now = false) => {
+    // The saver reads `latest`: set it now, or an immediate save would store the previous theme.
+    latest.current = next;
     setTheme(next);
     setMessage('');
     saver.schedule();
@@ -277,6 +283,14 @@ export function SlideThemeSettings({ vault }: { vault: Vault }) {
             }}
           />
 
+          {isEnabled('reportDeck') && (
+            <ReportStyleFields
+              theme={theme}
+              onChange={(next) => update(next, true)}
+              onError={(e) => setErrors(e ? [e] : [])}
+            />
+          )}
+
           <span class="field-label">Share this theme</span>
           <p class="row">
             <button type="button" class="small" onClick={download}>
@@ -304,19 +318,12 @@ export function SlideThemeSettings({ vault }: { vault: Vault }) {
               else if (!result.ok) setErrors(result.errors);
               else {
                 let imported = result.theme;
-                if (imported.logo) {
-                  // Re-encode the logo through a canvas, like every imported image.
-                  try {
-                    const blob = new Blob([imported.logo.bytes], { type: 'image/png' });
-                    const img = await processLogo(blob);
-                    imported = {
-                      ...imported,
-                      logo: { bytes: img.bytes, width: img.width, height: img.height },
-                    };
-                  } catch {
-                    setErrors(['The logo in this theme file could not be read.']);
-                    return;
-                  }
+                // Re-encode every image through a canvas, like every imported image.
+                try {
+                  imported = await reencodeTheme(imported, canvasReencode);
+                } catch {
+                  setErrors(['An image in this theme file could not be read.']);
+                  return;
                 }
                 setErrors([]);
                 update(imported, true);

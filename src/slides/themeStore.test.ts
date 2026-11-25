@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import { Vault } from '../storage/vault';
-import { DEFAULT_THEME } from './theme';
+import { DEFAULT_REPORT_STYLE, DEFAULT_THEME, type SlideTheme } from './theme';
 import { exportTheme, importTheme, loadTheme, saveTheme } from './themeStore';
 
 const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3]);
@@ -24,6 +24,28 @@ describe('theme storage', () => {
     expect(await loadTheme(vault)).toEqual(withoutLogo);
     vault.close();
   });
+
+  it('keeps the report style and its images, and drops removed images', async () => {
+    const vault = await Vault.open({ name: `theme-${++n}`, iterations: 1_000 });
+    await vault.setup('passphrase');
+    const withReport: SlideTheme = {
+      ...DEFAULT_THEME,
+      logo: { bytes: png, width: 300, height: 80 },
+      report: {
+        ...DEFAULT_REPORT_STYLE,
+        primary: '#451dc7',
+        cover: { bytes: new Uint8Array([...png, 9]), width: 1920, height: 1080 },
+        coverLogo: { bytes: new Uint8Array([...png, 8]), width: 400, height: 100 },
+      },
+    };
+    await saveTheme(vault, withReport);
+    expect(await loadTheme(vault)).toEqual(withReport);
+    const { cover: _c, ...noCover } = withReport.report ?? DEFAULT_REPORT_STYLE;
+    await saveTheme(vault, { ...withReport, report: noCover });
+    expect(await loadTheme(vault)).toEqual({ ...withReport, report: noCover });
+    expect(await vault.getBytes('themes', 'active-cover')).toBeUndefined();
+    vault.close();
+  });
 });
 
 describe('theme import/export', () => {
@@ -34,6 +56,35 @@ describe('theme import/export', () => {
       logo: { bytes: png, width: 300, height: 80 },
     };
     expect(importTheme(exportTheme(theme))).toEqual({ ok: true, theme });
+  });
+
+  it('round-trips the report style; a file without one has none', () => {
+    const theme: SlideTheme = {
+      ...DEFAULT_THEME,
+      report: {
+        ...DEFAULT_REPORT_STYLE,
+        dark: '#250f6b',
+        cover: { bytes: png, width: 1920, height: 1080 },
+      },
+    };
+    expect(importTheme(exportTheme(theme))).toEqual({ ok: true, theme });
+    const plain = importTheme(exportTheme(DEFAULT_THEME));
+    expect(plain.ok && plain.theme.report).toBeUndefined();
+  });
+
+  it('checks the report style field by field', () => {
+    const file = JSON.parse(exportTheme(DEFAULT_THEME)) as { theme: Record<string, unknown> };
+    file.theme.report = { primary: 'red', cover: { pngBase64: 'AAAA', width: 10, height: 10 } };
+    const result = importTheme(JSON.stringify(file));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain('Report primary colour must be a colour like #1a2b3c.');
+      expect(result.errors).toContain('The cover image must be a PNG image.');
+    }
+    // Missing colours fall back to the defaults.
+    file.theme.report = {};
+    const partial = importTheme(JSON.stringify(file));
+    expect(partial.ok && partial.theme.report).toEqual(DEFAULT_REPORT_STYLE);
   });
 
   it('rejects files that are not themes', () => {

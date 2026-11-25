@@ -142,6 +142,10 @@ test('exports a theme and imports it back; rejects an invalid file', async ({ pa
   await expect(page.getByLabel('Footer text')).toHaveValue('Confidential');
   await page.getByTestId('theme-file').setInputFiles(file);
   await expect(page.getByLabel('Footer text')).toHaveValue('Exported footer');
+  // The imported theme is saved, not only shown.
+  await page.getByRole('link', { name: 'Findings', exact: true }).click();
+  await page.getByRole('link', { name: 'Settings' }).click();
+  await expect(page.getByLabel('Footer text')).toHaveValue('Exported footer');
 
   exported.theme.colors.accent = 'url(javascript:alert(1))';
   const bad = testInfo.outputPath('bad.json');

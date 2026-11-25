@@ -121,7 +121,12 @@ when behaviour changes.
   editor). Routes `#/recommendations`, `#/recommendations/<id>`. IndexedDB store added by migration 1 → 2.
 - `src/report/`: `mission.ts` (pure: `Project.mission` details, security status from the worst rated
   scenario, executive sentence, date range EN/FR, missing items), `repository.ts` (`saveMission`
-  re-reads the project), `ReportPage.tsx` (route `#/report`).
+  re-reads the project), `ReportPage.tsx` (route `#/report`). Full report deck (`reportDeck` flag):
+  `deck.ts` (pure: cover, agenda per section with computed pages, sections, appendices, closing
+  slide), `draw.ts` (header, footer, `table()` with row/column spans and text-driven row heights),
+  `labels.ts` (EN/FR), `ReportExport.tsx` (previews + .pptx). Look: `SlideTheme.report`
+  (`ReportStyle`: colours, cover image and cover logo stored as their own `themes` records), edited
+  in `slides/ReportStyleFields.tsx`. Branded themes are local files: never commit one.
 - `src/backup/`: mission files (`.pwnp`, format version 5; versions 1–4 still read). `mission.ts` (stored ZIP; plain or AES-GCM payload under a
   PBKDF2 key, `encryptWithPassphrase` in `crypto.ts`), `validate.ts` (strict field-by-field rebuild,
   limits, cross-references; never trust the file), `repository.ts` (collect, restore with replace /
