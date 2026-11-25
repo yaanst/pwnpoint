@@ -8,8 +8,8 @@ export const flags = {
   cvssAdvanced: true,
   /** Branching attack scenarios: alternative paths (on since v0.2.0). */
   scenarioBranches: true,
-  /** Full report deck in the report template layout (work in progress). */
-  reportDeck: false,
+  /** Full report deck in the report template layout (on since v0.4.0). */
+  reportDeck: true,
 } as const satisfies Record<string, boolean>;
 
 export type Flag = keyof typeof flags;

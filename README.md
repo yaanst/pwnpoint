@@ -67,6 +67,34 @@ The **Report** page holds what the report's first slides need, per project:
 
 The page lists what is still missing before the report.
 
+### Report deck
+
+**Export report (.pptx)** on the Report page builds the full report, with a preview of every
+slide and its layout warnings:
+
+1. **Cover:** client, product, dates, version.
+2. **An agenda before each section,** with the page numbers worked out.
+3. **Introduction:** the assessment details.
+4. **Executive summary:** the security status sentence, strengths, areas of improvement and the
+   status scale with the current level ticked.
+5. **Attack scenarios:**
+   - the exploitability × impact matrix, with each scenario in its cell;
+   - the scenario list, worst first;
+   - one slide per scenario: description, rating with rationales, and its attack path.
+6. **Vulnerabilities:** one slide per **validated** finding, in report order. It shows the CVSS
+   vector letters, the score and severity, the description, up to 4 screenshots and the linked
+   recommendations (continued on the next slide when long).
+7. **Recommendations:** the action plan table by priority and the four quadrants.
+8. **Appendix:** the status, severity, CVSS, scenario and recommendation scales.
+9. **Closing slide.**
+
+Sections with nothing to show are left out. For a PDF, save the PowerPoint file as PDF.
+
+The look comes from **Settings → Slide theme → Report deck**: primary, dark, accent and light
+colours, the text colour on them, a cover background image and a cover logo. Fonts, footer text,
+logo and severity colours come from the slide theme. Export the theme to reuse it, and keep a
+branded theme as a local file.
+
 ## CVSS 3.1
 
 Each finding is scored with the CVSS 3.1 base metrics (or a pasted vector string). The

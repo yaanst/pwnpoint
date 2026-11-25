@@ -1,10 +1,12 @@
-import type { Project } from '../findings/model';
+import type { Finding, Project } from '../findings/model';
+import type { Recommendation } from '../recommendations/model';
 import { CRITERIA, QUADRANTS, SCALE3 } from '../recommendations/model';
 import type { Scenario } from '../scenarios/model';
 import { RATINGS, scenarioSeverity, SEVERITY_COLOURS } from '../scenarios/rating';
 import {
   fitImage,
   LINE_HEIGHT,
+  type EvidenceRef,
   type Paragraph,
   ptToIn,
   type Slide,
@@ -34,6 +36,13 @@ import {
 } from './draw';
 import { type Section, SECTIONS } from './labels';
 import {
+  actionPlan,
+  reportFindings,
+  scenarioDetail,
+  scenarioSummary,
+  vulnerabilitySlides,
+} from './sections';
+import {
   EMPTY_MISSION,
   formatDateRange,
   type MissionDetails,
@@ -50,6 +59,11 @@ import {
 export interface ReportInput {
   project: Project;
   scenarios: Scenario[];
+  /** Every finding of the project (validated ones are reported; others resolve scenario steps). */
+  findings?: Finding[];
+  recommendations?: Recommendation[];
+  /** Evidence of each finding, in order. */
+  evidence?: Map<string, EvidenceRef[]>;
 }
 
 export interface ReportDeck {
@@ -884,6 +898,22 @@ function recoScalesSlide(ctx: Ctx, m: MissionDetails): Slide {
   );
 }
 
+function scenarioSlides(
+  ctx: Ctx,
+  m: MissionDetails,
+  scenarios: Scenario[],
+  findings: Map<string, Finding>,
+): Slide[] {
+  if (!scenarios.length) return [];
+  const bodies = [
+    ...scenarioSummary(ctx, scenarios),
+    ...[...scenarios]
+      .sort((a, b) => a.number - b.number)
+      .map((s) => scenarioDetail(ctx, s, findings)),
+  ];
+  return bodies.map((b) => contentSlide(ctx, m, 'scenarios', b.title, b.elements, b.warnings));
+}
+
 /** Builds the deck. Sections without slides are left out of the agenda. */
 export function buildReportDeck(
   input: ReportInput,
@@ -892,12 +922,26 @@ export function buildReportDeck(
 ): ReportDeck {
   const ctx = makeCtx(theme, measure);
   const m = { ...EMPTY_MISSION, ...input.project.mission };
+  const findings = new Map((input.findings ?? []).map((f) => [f.id, f]));
+  const recs = input.recommendations ?? [];
   const content: Record<Section, Slide[]> = {
     introduction: [modalitiesSlide(ctx, m)],
     summary: [summarySlide(ctx, m, input.scenarios)],
-    scenarios: [],
-    vulnerabilities: [],
-    recommendations: [],
+    scenarios: scenarioSlides(ctx, m, input.scenarios, findings),
+    vulnerabilities: reportFindings(input.findings ?? []).flatMap((f) =>
+      vulnerabilitySlides(
+        ctx,
+        f,
+        input.evidence?.get(f.id) ?? [],
+        recs.filter((r) => r.findingIds.includes(f.id)),
+        input.project,
+      ).map((b) => contentSlide(ctx, m, 'vulnerabilities', b.title, b.elements, b.warnings)),
+    ),
+    recommendations: recs.length
+      ? actionPlan(ctx, recs, m).map((b) =>
+          contentSlide(ctx, m, 'recommendations', b.title, b.elements, b.warnings),
+        )
+      : [],
     appendix: [
       statusScaleSlide(ctx, m),
       severityScaleSlide(ctx, m),

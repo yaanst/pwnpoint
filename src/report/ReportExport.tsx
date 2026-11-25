@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { downloadBlob, langTag, PPTX_TYPE, safeFileName } from '../export/collect';
 import { buildPptx } from '../export/pptx';
-import type { Project } from '../findings/model';
+import { getEvidenceBytes, listEvidence } from '../evidence/repository';
+import type { Finding, Project } from '../findings/model';
+import { whenSaved } from '../findings/pendingSaves';
+import { listFindings } from '../findings/repository';
+import type { Recommendation } from '../recommendations/model';
+import { listRecommendations } from '../recommendations/repository';
+import type { EvidenceRef } from '../slides/layout';
 import type { Scenario } from '../scenarios/model';
 import { canvasMeasure } from '../slides/measure';
 import { SlideSvg } from '../slides/SlideSvg';
@@ -10,6 +16,36 @@ import { loadTheme } from '../slides/themeStore';
 import type { Vault } from '../storage/vault';
 import { on } from '../ui/events';
 import { buildReportDeck } from './deck';
+import { reportFindings } from './sections';
+
+interface Data {
+  findings: Finding[];
+  recommendations: Recommendation[];
+  evidence: Map<string, EvidenceRef[]>;
+  /** PNG bytes of the evidence shown (4 per reported finding at most). */
+  bytes: Record<string, Uint8Array<ArrayBuffer>>;
+}
+
+async function loadData(vault: Vault, projectId: string): Promise<Data> {
+  await whenSaved();
+  const findings = await listFindings(vault, projectId);
+  const evidence = new Map<string, EvidenceRef[]>();
+  const bytes: Data['bytes'] = {};
+  for (const f of reportFindings(findings)) {
+    const list = await listEvidence(vault, f.id);
+    evidence.set(f.id, list);
+    for (const e of list.slice(0, 4)) {
+      const b = await getEvidenceBytes(vault, e.id);
+      if (b) bytes[e.id] = b;
+    }
+  }
+  return {
+    findings,
+    recommendations: await listRecommendations(vault, projectId),
+    evidence,
+    bytes,
+  };
+}
 
 /** PNG bytes of the theme images a report slide can show, by image source. */
 function themeImages(theme: SlideTheme): Record<string, Uint8Array<ArrayBuffer>> {
@@ -25,17 +61,38 @@ export function ReportExport(props: { vault: Vault; project: Project; scenarios:
   const { vault, project, scenarios } = props;
   const [theme, setTheme] = useState<SlideTheme | null>(null);
   const [status, setStatus] = useState('');
+  const [data, setData] = useState<Data | null>(null);
   useEffect(() => {
     const load = () => void loadTheme(vault).then(setTheme);
     load();
     return on('theme-changed', load);
   }, [vault]);
+  useEffect(() => {
+    void loadData(vault, project.id).then(setData);
+    return on('evidence-changed', () => void loadData(vault, project.id).then(setData));
+  }, [vault, project.id]);
 
   const deck = useMemo(
-    () => (theme ? buildReportDeck({ project, scenarios }, theme, canvasMeasure) : null),
-    [theme, project, scenarios],
+    () =>
+      theme && data
+        ? buildReportDeck(
+            {
+              project,
+              scenarios,
+              findings: data.findings,
+              recommendations: data.recommendations,
+              evidence: data.evidence,
+            },
+            theme,
+            canvasMeasure,
+          )
+        : null,
+    [theme, project, scenarios, data],
   );
-  const images = useMemo(() => (theme ? themeImages(theme) : {}), [theme]);
+  const images = useMemo(
+    () => (theme && data ? { ...data.bytes, ...themeImages(theme) } : {}),
+    [theme, data],
+  );
   const [urls, setUrls] = useState<Record<string, string>>({});
   useEffect(() => {
     const made = Object.fromEntries(
@@ -48,7 +105,8 @@ export function ReportExport(props: { vault: Vault; project: Project; scenarios:
     return () => Object.values(made).forEach((u) => URL.revokeObjectURL(u));
   }, [images]);
 
-  if (!theme || !deck) return <p aria-busy="true">Loading…</p>;
+  if (!theme || !deck || !data) return <p aria-busy="true">Loading…</p>;
+  const drafts = data.findings.filter((f) => f.status !== 'validated').length;
   const flagged = deck.slides.flatMap((s, i) => s.warnings.map((w) => `Slide ${i + 1}: ${w}`));
 
   const exportPptx = () => {
@@ -81,6 +139,12 @@ export function ReportExport(props: { vault: Vault; project: Project; scenarios:
           {status}
         </span>
       </p>
+      {drafts > 0 && (
+        <p class="hint" data-testid="report-drafts">
+          {drafts} draft finding{drafts > 1 ? 's are' : ' is'} not in the report: only validated
+          findings are.
+        </p>
+      )}
       {flagged.length > 0 && (
         <ul class="warning" data-testid="report-warnings">
           {flagged.map((w) => (

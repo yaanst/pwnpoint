@@ -40,12 +40,14 @@ describe('buildReportDeck', () => {
   const deck = buildReportDeck({ project, scenarios: [major] }, DEFAULT_THEME, fakeMeasure);
 
   it('puts an agenda before each section that has slides, with computed pages', () => {
-    // Cover, agenda + modalities, agenda + summary, agenda + 6 appendix slides, closing.
-    expect(deck.slides).toHaveLength(13);
+    // Cover, agenda + modalities, agenda + summary, agenda + scenario matrix + 1 scenario,
+    // agenda + 6 appendix slides, closing.
+    expect(deck.slides).toHaveLength(16);
     expect(deck.sections).toEqual([
       { section: 'introduction', page: 3 },
       { section: 'summary', page: 5 },
-      { section: 'appendix', page: 7 },
+      { section: 'scenarios', page: 7 },
+      { section: 'appendix', page: 10 },
     ]);
     const agenda = deck.slides[3];
     expect(byRole(agenda, 'agenda-current').map((e) => e.paragraphs[0]?.runs[0]?.text)).toEqual([
@@ -55,6 +57,7 @@ describe('buildReportDeck', () => {
       'Page 3',
       'Page 5',
       'Page 7',
+      'Page 10',
     ]);
   });
 
@@ -65,7 +68,8 @@ describe('buildReportDeck', () => {
     expect(numbers[0]).toBeUndefined();
     expect(numbers[1]).toBe('| 2');
     expect(numbers[11]).toBe('| 12');
-    expect(numbers[12]).toBeUndefined();
+    expect(numbers[14]).toBe('| 15');
+    expect(numbers[15]).toBeUndefined();
   });
 
   it('fills the cover, the modalities and the executive summary', () => {
