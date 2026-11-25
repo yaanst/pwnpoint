@@ -90,7 +90,7 @@ describe('mission file', () => {
     expect([...files.keys()]).toEqual(['pwnpoint.json', 'data.json', 'images/e1.png']);
     expect(JSON.parse(dec.decode(files.get('pwnpoint.json')))).toEqual({
       format: 'pwnpoint-mission',
-      version: 2,
+      version: 3,
       encrypted: false,
     });
     const content = ok(openMissionFile(file));
@@ -141,7 +141,7 @@ describe('mission file', () => {
       errors(openMissionFile(zip([{ name: 'pwnpoint.json', data: enc.encode('{}') }]))),
     ).toMatch(/not a PwnPoint mission file/);
     const newer = zip([
-      { name: 'pwnpoint.json', data: enc.encode('{"format":"pwnpoint-mission","version":3}') },
+      { name: 'pwnpoint.json', data: enc.encode('{"format":"pwnpoint-mission","version":4}') },
     ]);
     expect(errors(openMissionFile(newer))).toMatch(/newer version/);
   });
@@ -262,6 +262,35 @@ describe('mission file', () => {
     const opened = openMissionFile(encrypted);
     if (opened.status !== 'needs-passphrase') throw new Error('expected a passphrase prompt');
     expect(first(ok(await opened.open('pass phrase')).projects).project.name).toBe('ACME');
+  });
+
+  it('keeps scenario ratings, converts 4-level ones from older files, refuses bad ones', async () => {
+    const rated = await tampered((d) => {
+      Object.assign(first(d.scenarios as Record<string, unknown>[]), {
+        exploitability: 4,
+        impact: 5,
+        impactRationale: 'Domain admin',
+      });
+    });
+    const s = first(first(ok(openMissionFile(rated)).projects).scenarios);
+    expect(s).toMatchObject({ exploitability: 4, impact: 5, impactRationale: 'Domain admin' });
+    expect(s.exploitabilityRationale).toBe('');
+
+    const legacy = await tampered((d) => {
+      d.version = 2;
+      const sc = first(d.scenarios as Record<string, unknown>[]);
+      delete sc.exploitabilityRationale;
+      delete sc.impactRationale;
+      Object.assign(sc, { impact: 'Critical', likelihood: 'Low' });
+    });
+    const old = first(first(ok(openMissionFile(legacy)).projects).scenarios);
+    expect(old).toMatchObject({ exploitability: 2, impact: 5, impactRationale: '' });
+    expect(Object.keys(old)).not.toContain('likelihood');
+
+    const bad = await tampered((d) => {
+      Object.assign(first(d.scenarios as Record<string, unknown>[]), { impact: 'High' });
+    });
+    expect(errors(openMissionFile(bad))).toMatch(/Scenario 1 impact must be a whole number from 1/);
   });
 
   it('keeps valid environmental metrics and refuses invalid ones', async () => {

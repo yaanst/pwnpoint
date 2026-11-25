@@ -15,7 +15,8 @@ import {
   SEVERITIES,
   STATUSES,
 } from '../findings/model';
-import { type Level, LEVELS, type Scenario, type ScenarioStep } from '../scenarios/model';
+import { type Scenario, type ScenarioStep } from '../scenarios/model';
+import { isRating, LEGACY_LEVELS, type Rating } from '../scenarios/rating';
 import { validateThemeFile } from '../slides/themeStore';
 import type { SlideTheme } from '../slides/theme';
 
@@ -26,9 +27,12 @@ import type { SlideTheme } from '../slides/theme';
  */
 
 export const MISSION_FORMAT = 'pwnpoint-mission';
-/** Version written. 2 added finding categories; version 1 files are still read. */
-export const MISSION_VERSION = 2;
-export const READABLE_VERSIONS: readonly unknown[] = [1, 2];
+/**
+ * Version written. 2 added finding categories, 3 the 5-level scenario rating. Older versions
+ * are still read.
+ */
+export const MISSION_VERSION = 3;
+export const READABLE_VERSIONS: readonly unknown[] = [1, 2, 3];
 
 export const LIMITS = {
   projects: 1_000,
@@ -265,10 +269,21 @@ function step(c: Checker, v: unknown, where: string): ScenarioStep {
   return s;
 }
 
-function scenario(c: Checker, v: unknown, i: number): Scenario {
+/** A 1–5 rating; files before version 3 used Critical, High, Medium, Low (5 to 2). */
+function rating(c: Checker, v: unknown, version: unknown, where: string): Rating | undefined {
+  if (v === undefined) return undefined;
+  if (isRating(v)) return v;
+  if (version !== MISSION_VERSION && typeof v === 'string' && LEGACY_LEVELS[v]) {
+    return LEGACY_LEVELS[v];
+  }
+  c.fail(`${where} must be a whole number from 1 to 5.`);
+  return undefined;
+}
+
+function scenario(c: Checker, v: unknown, i: number, version: unknown): Scenario {
   const where = `Scenario ${i + 1}`;
   const o = c.obj(v, where);
-  return {
+  const s: Scenario = {
     id: c.id(o.id, where),
     projectId: c.id(o.projectId, `${where} project`),
     number: c.int(o.number, `${where} number`, 1),
@@ -276,14 +291,30 @@ function scenario(c: Checker, v: unknown, i: number): Scenario {
     start: c.str(o.start, `${where} start`),
     goal: c.str(o.goal, `${where} goal`),
     context: c.str(o.context, `${where} context`, LIMITS.longText),
-    impact: c.oneOf<Level>(o.impact, LEVELS, `${where} impact`),
-    likelihood: c.oneOf<Level>(o.likelihood, LEVELS, `${where} likelihood`),
+    exploitabilityRationale:
+      o.exploitabilityRationale === undefined
+        ? ''
+        : c.str(o.exploitabilityRationale, `${where} exploitability rationale`, LIMITS.longText),
+    impactRationale:
+      o.impactRationale === undefined
+        ? ''
+        : c.str(o.impactRationale, `${where} impact rationale`, LIMITS.longText),
     steps: c
       .list(o.steps, `${where} steps`, LIMITS.steps)
       .map((s, j) => step(c, s, `${where} step ${j + 1}`)),
     createdAt: c.time(o.createdAt, where),
     updatedAt: c.time(o.updatedAt, where),
   };
+  const exploitability = rating(
+    c,
+    o.exploitability ?? o.likelihood,
+    version,
+    `${where} exploitability`,
+  );
+  const impact = rating(c, o.impact, version, `${where} impact`);
+  if (exploitability) s.exploitability = exploitability;
+  if (impact) s.impact = impact;
+  return s;
 }
 
 const isPng = (b: Uint8Array) => PNG_SIGNATURE.every((x, i) => b[i] === x);
@@ -318,7 +349,7 @@ export function validateMission(
     .map((v, i) => evidence(c, v, i));
   const scenarios = c
     .list(data.scenarios, 'Scenarios', LIMITS.scenarios)
-    .map((v, i) => scenario(c, v, i));
+    .map((v, i) => scenario(c, v, i, data.version));
   if (projects.length === 0) c.fail('The file contains no project.');
 
   // Ids must be unique, and every record must point at something in the file.

@@ -1,6 +1,6 @@
 import type { Project } from '../findings/model';
 import type { Vault } from '../storage/vault';
-import { newScenario, type Scenario } from './model';
+import { newScenario, type Scenario, upgradeScenario } from './model';
 
 const newId = () => globalThis.crypto.randomUUID();
 export const newStepId = newId;
@@ -34,13 +34,14 @@ export async function saveScenario(
   return saved;
 }
 
-export function getScenario(vault: Vault, id: string): Promise<Scenario | undefined> {
-  return vault.get<Scenario>('scenarios', id);
+export async function getScenario(vault: Vault, id: string): Promise<Scenario | undefined> {
+  const s = await vault.get<Scenario>('scenarios', id);
+  return s && upgradeScenario(s);
 }
 
 export async function listScenarios(vault: Vault, projectId: string): Promise<Scenario[]> {
   return (await vault.list<Scenario>('scenarios', projectId))
-    .map((r) => r.value)
+    .map((r) => upgradeScenario(r.value))
     .sort((a, b) => a.number - b.number);
 }
 

@@ -1,5 +1,5 @@
 import type { Severity } from '../cvss/cvss31';
-import type { Level } from '../scenarios/model';
+import type { Rating, ScenarioSeverity } from '../scenarios/rating';
 
 export type SlideLanguage = 'en' | 'fr';
 
@@ -70,9 +70,16 @@ export interface SlideLabels {
     context: string;
     breakChain: string;
     path: string;
+    exploitability: string;
     impact: string;
-    likelihood: string;
-    levels: { impact: Record<Level, string>; likelihood: Record<Level, string> };
+    severity: string;
+    /** Shown instead of a rating the auditor has not set yet. */
+    notRated: string;
+    levels: {
+      exploitability: Record<Rating, string>;
+      impact: Record<Rating, string>;
+      severity: Record<ScenarioSeverity, string>;
+    };
     technique: string;
     chainBreaker: string;
     missing: string;
@@ -111,16 +118,14 @@ export const LABELS: Record<SlideLanguage, SlideLabels> = {
       context: 'Context',
       breakChain: 'Break the chain',
       path: 'Attack path',
+      exploitability: 'Exploitability',
       impact: 'Impact',
-      likelihood: 'Likelihood',
+      severity: 'Severity',
+      notRated: 'Not rated',
       levels: {
-        impact: { Critical: 'Critical', High: 'High', Medium: 'Medium', Low: 'Low' },
-        likelihood: {
-          Critical: 'Very likely',
-          High: 'Likely',
-          Medium: 'Possible',
-          Low: 'Unlikely',
-        },
+        exploitability: { 1: 'Rare', 2: 'Unlikely', 3: 'Possible', 4: 'Likely', 5: 'Very likely' },
+        impact: { 1: 'Negligible', 2: 'Low', 3: 'Medium', 4: 'Significant', 5: 'Very significant' },
+        severity: { Minor: 'Minor', Moderate: 'Moderate', Major: 'Major', Severe: 'Severe' },
       },
       technique: 'Technique',
       chainBreaker: 'Chain breaker',
@@ -163,11 +168,26 @@ export const LABELS: Record<SlideLanguage, SlideLabels> = {
       context: 'Contexte',
       breakChain: 'Briser la chaîne',
       path: 'Chemin d’attaque',
+      exploitability: 'Exploitabilité',
       impact: 'Impact',
-      likelihood: 'Vraisemblance',
+      severity: 'Sévérité',
+      notRated: 'Non évalué',
       levels: {
-        impact: { Critical: 'Critique', High: 'Élevé', Medium: 'Moyen', Low: 'Faible' },
-        likelihood: { Critical: 'Très forte', High: 'Forte', Medium: 'Moyenne', Low: 'Faible' },
+        exploitability: {
+          1: 'Rare',
+          2: 'Peu probable',
+          3: 'Possible',
+          4: 'Probable',
+          5: 'Très probable',
+        },
+        impact: {
+          1: 'Négligeable',
+          2: 'Faible',
+          3: 'Moyen',
+          4: 'Significatif',
+          5: 'Très significatif',
+        },
+        severity: { Minor: 'Mineure', Moderate: 'Modérée', Major: 'Majeure', Severe: 'Sévère' },
       },
       technique: 'Technique',
       chainBreaker: 'Point de rupture',

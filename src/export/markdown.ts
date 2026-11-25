@@ -1,7 +1,8 @@
 import { isLinear, successors } from '../scenarios/graph';
 import { effectiveSeverity, type Finding, findingRef, findingCvss } from '../findings/model';
 import { type Scenario, scenarioRef, stepView } from '../scenarios/model';
-import { LABELS, type SlideLanguage } from '../slides/theme';
+import { scenarioSeverity } from '../scenarios/rating';
+import { LABELS, type SlideLabels, type SlideLanguage } from '../slides/theme';
 
 /** Markdown-lite (bold, code, bullets) is a subset of Markdown, so user text is kept as is. */
 const block = (title: string, body: string) =>
@@ -99,7 +100,7 @@ export function scenarioMarkdown(
   const lines = [
     `${h} ${scenarioRef(s.number)} ${one(s.title) || S.untitled}`,
     '',
-    `**${S.impact}:** ${S.levels.impact[s.impact]} · **${S.likelihood}:** ${S.levels.likelihood[s.likelihood]}`,
+    scenarioRatingLine(s, S),
     '',
     `**${S.start}:** ${one(s.start) || '—'}`,
     '',
@@ -129,4 +130,16 @@ export function scenarioMarkdown(
   });
   if (breakers.length) lines.push('', `${sub} ${S.breakChain}`, '', ...breakers);
   return lines.join('\n') + '\n';
+}
+
+/** "**Severity:** Major · **Exploitability:** Likely · **Impact:** Significant", or "Not rated". */
+function scenarioRatingLine(s: Scenario, S: SlideLabels['scenario']): string {
+  const e = s.exploitability;
+  const i = s.impact;
+  const severity = e && i ? S.levels.severity[scenarioSeverity(e, i)] : S.notRated;
+  return [
+    `**${S.severity}:** ${severity}`,
+    `**${S.exploitability}:** ${e ? S.levels.exploitability[e] : S.notRated}`,
+    `**${S.impact}:** ${i ? S.levels.impact[i] : S.notRated}`,
+  ].join(' · ');
 }
