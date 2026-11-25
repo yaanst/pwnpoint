@@ -8,6 +8,7 @@ import { ScenarioEditorPage } from './scenarios/ScenarioEditor';
 import { ScenariosPage } from './scenarios/ScenariosPage';
 import { RecommendationEditorPage } from './recommendations/RecommendationEditor';
 import { RecommendationsPage } from './recommendations/RecommendationsPage';
+import { ReportPage } from './report/ReportPage';
 import { DEFAULT_CVSS } from './findings/model';
 import { guardUnloadWhileSaving } from './findings/pendingSaves';
 import { AppearanceSettings } from './settings/AppearanceSettings';
@@ -39,6 +40,8 @@ export function App() {
         return <RecommendationsPage vault={vault} />;
       case 'recommendation':
         return <RecommendationEditorPage vault={vault} id={page.id} />;
+      case 'report':
+        return <ReportPage vault={vault} />;
       case 'cvss':
         return (
           <CvssCalculator value={metrics} onChange={setMetrics} env={env} onEnvChange={setEnv} />
@@ -74,6 +77,9 @@ export function App() {
           </a>
           <a href="#/recommendations" aria-current={current(['recommendations', 'recommendation'])}>
             Recommendations
+          </a>
+          <a href="#/report" aria-current={current(['report'])}>
+            Report
           </a>
           <a href="#/cvss" aria-current={current(['cvss'])}>
             CVSS calculator

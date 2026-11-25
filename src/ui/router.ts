@@ -13,6 +13,7 @@ export type Page =
   | { name: 'scenario'; id: string }
   | { name: 'recommendations' }
   | { name: 'recommendation'; id: string }
+  | { name: 'report' }
   | { name: 'cvss' }
   | { name: 'settings' }
   | { name: 'not-found' };
@@ -34,6 +35,7 @@ export function matchRoute(route: string): Page {
       return { name: 'not-found' };
     }
   }
+  if (parts.length === 1 && parts[0] === 'report') return { name: 'report' };
   if (parts.length === 1 && parts[0] === 'cvss') return { name: 'cvss' };
   if (parts.length === 1 && parts[0] === 'settings') return { name: 'settings' };
   return { name: 'not-found' };

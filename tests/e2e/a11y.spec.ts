@@ -126,6 +126,10 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(page.getByTestId('row-REC.01')).toBeVisible();
     await audit(page, 'recommendations list');
 
+    await page.getByRole('link', { name: 'Report', exact: true }).click();
+    await page.getByLabel('Client').fill('ACME');
+    await audit(page, 'report');
+
     await page.getByRole('link', { name: 'CVSS calculator' }).click();
     // Environmental metrics (behind the cvssAdvanced flag): audit them open.
     const environmental = page.getByText("Environmental metrics (this client's context)");

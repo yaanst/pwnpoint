@@ -17,6 +17,7 @@ import {
   STATUSES,
 } from '../findings/model';
 import { isScale3, type Recommendation, type Scale3 } from '../recommendations/model';
+import { DATE, type MissionDetails } from '../report/mission';
 import { type Scenario, type ScenarioStep } from '../scenarios/model';
 import { isRating, LEGACY_LEVELS, type Rating } from '../scenarios/rating';
 import { validateThemeFile } from '../slides/themeStore';
@@ -31,10 +32,10 @@ import type { SlideTheme } from '../slides/theme';
 export const MISSION_FORMAT = 'pwnpoint-mission';
 /**
  * Version written. 2 added finding categories, 3 the 5-level scenario rating, 4
- * recommendations. Older versions are still read.
+ * recommendations, 5 mission details. Older versions are still read.
  */
-export const MISSION_VERSION = 4;
-export const READABLE_VERSIONS: readonly unknown[] = [1, 2, 3, 4];
+export const MISSION_VERSION = 5;
+export const READABLE_VERSIONS: readonly unknown[] = [1, 2, 3, 4, 5];
 
 export const LIMITS = {
   projects: 1_000,
@@ -173,7 +174,37 @@ function project(c: Checker, v: unknown, i: number): Project {
   if (recCategories) p.recommendationCategories = recCategories;
   const recCounters = counterMap(c, o.recommendationCounters, `${where} recommendation category`);
   if (recCounters) p.recommendationCounters = recCounters;
+  if (o.mission !== undefined) p.mission = mission(c, o.mission, `${where} details`);
   return p;
+}
+
+function mission(c: Checker, v: unknown, where: string): MissionDetails {
+  const o = c.obj(v, where);
+  const text = (k: string, label: string, max: number = LIMITS.shortText) =>
+    c.str(o[k] ?? '', `${where}: ${label}`, max);
+  const date = (k: string, label: string) => {
+    const d = o[k] ?? '';
+    if (d === '' || (typeof d === 'string' && DATE.test(d))) return d as string;
+    c.fail(`${where}: ${label} must be a date (YYYY-MM-DD).`);
+    return '';
+  };
+  const list = (k: string, label: string) => c.texts(o[k] ?? [], `${where}: ${label}`);
+  return {
+    client: text('client', 'client'),
+    product: text('product', 'product'),
+    from: date('from', 'first day'),
+    to: date('to', 'last day'),
+    version: text('version', 'version', 40),
+    leadAuditor: text('leadAuditor', 'lead auditor'),
+    auditors: list('auditors', 'auditor'),
+    auditType: text('auditType', 'assessment type'),
+    scope: text('scope', 'scope', LIMITS.longText),
+    infraType: text('infraType', 'infrastructure type'),
+    comments: text('comments', 'comments', LIMITS.longText),
+    strengths: list('strengths', 'strength'),
+    weaknesses: list('weaknesses', 'area of improvement'),
+    securityLevelReason: text('securityLevelReason', 'security level reason', LIMITS.longText),
+  };
 }
 
 /** A project's own categories: valid, unique codes that do not repeat a built-in one. */

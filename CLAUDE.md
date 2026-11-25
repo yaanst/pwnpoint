@@ -119,7 +119,10 @@ when behaviour changes.
   `quadrantOf` for the action plan), repository (`findingIds` links; `deleteFinding` unlinks),
   `RecommendationsPage.tsx`, `RecommendationEditor.tsx`, `LinkedRecommendations.tsx` (finding
   editor). Routes `#/recommendations`, `#/recommendations/<id>`. IndexedDB store added by migration 1 → 2.
-- `src/backup/`: mission files (`.pwnp`, format version 4; versions 1–3 still read). `mission.ts` (stored ZIP; plain or AES-GCM payload under a
+- `src/report/`: `mission.ts` (pure: `Project.mission` details, security status from the worst rated
+  scenario, executive sentence, date range EN/FR, missing items), `repository.ts` (`saveMission`
+  re-reads the project), `ReportPage.tsx` (route `#/report`).
+- `src/backup/`: mission files (`.pwnp`, format version 5; versions 1–4 still read). `mission.ts` (stored ZIP; plain or AES-GCM payload under a
   PBKDF2 key, `encryptWithPassphrase` in `crypto.ts`), `validate.ts` (strict field-by-field rebuild,
   limits, cross-references; never trust the file), `repository.ts` (collect, restore with replace /
   copy, re-encode every image before writing), `files.ts` (native save dialog or download),
@@ -133,5 +136,5 @@ when behaviour changes.
   shipped) on every page in light and dark mode. Add new pages and dialogs to it.
 - `src/settings/`: Settings panels. `src/ui/router.ts`: hash router (`matchRoute`: `#/findings`,
   `#/findings/<id>`, `#/scenarios`, `#/scenarios/<id>`, `#/recommendations`,
-  `#/recommendations/<id>`, `#/cvss`, `#/settings`).
+  `#/recommendations/<id>`, `#/report`, `#/cvss`, `#/settings`).
 - Pure logic lives in plain `.ts` modules with colocated `*.test.ts` files; UI in `.tsx`.
